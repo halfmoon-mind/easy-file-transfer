@@ -16,7 +16,6 @@ cd easy-file-transfer
 npm i
 
 sudo vi /etc/nginx/sites-available/default
-
 # when in vi, save doesn't work use the following command
 # :w !sudo tee % > /dev/null
 
