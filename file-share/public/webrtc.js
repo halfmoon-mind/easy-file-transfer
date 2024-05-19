@@ -1,4 +1,4 @@
-const signalingServer = new WebSocket("ws://43.201.24.121:8080");
+const signalingServer = io("http://10.28.200.86:8080");
 
 // Initialize RTCPeerConnection
 const peerConnection = new RTCPeerConnection({
@@ -14,7 +14,7 @@ let currentFileMetadata = {}; // 수신 중인 파일의 메타데이터 저장 
 // Handle ICE candidates
 peerConnection.onicecandidate = (event) => {
     if (event.candidate) {
-        signalingServer.send(JSON.stringify({ candidate: event.candidate }));
+        signalingServer.emit("message", { candidate: event.candidate });
         console.log("ICE candidate sent:", event.candidate);
     } else {
         console.log("All ICE candidates have been sent");
@@ -22,27 +22,7 @@ peerConnection.onicecandidate = (event) => {
 };
 
 // Handle incoming signaling messages
-signalingServer.onmessage = async (message) => {
-    let data;
-
-    // Check if the message data is a Blob
-    if (message.data instanceof Blob) {
-        try {
-            const text = await message.data.text();
-            data = JSON.parse(text);
-        } catch (e) {
-            console.error("Failed to parse signaling message as JSON:", message.data);
-            return;
-        }
-    } else {
-        try {
-            data = JSON.parse(message.data);
-        } catch (e) {
-            console.error("Failed to parse signaling message as JSON:", message.data);
-            return;
-        }
-    }
-
+signalingServer.on("message", async (data) => {
     if (data.candidate) {
         console.log("Received ICE candidate:", data.candidate);
         try {
@@ -59,27 +39,19 @@ signalingServer.onmessage = async (message) => {
             if (data.sdp.type === "offer") {
                 const answer = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(answer);
-                signalingServer.send(JSON.stringify({ sdp: peerConnection.localDescription }));
+                signalingServer.emit("message", { sdp: peerConnection.localDescription });
                 console.log("Answer sent:", peerConnection.localDescription);
             }
         } catch (e) {
             console.error("Error setting remote SDP", e);
         }
     }
-};
+});
 
-signalingServer.onopen = () => {
-    console.log("WebSocket connection established");
+signalingServer.on("connect", () => {
+    console.log("Socket.io connection established");
     createConnection(); // Start the connection process once WebSocket is open
-};
-
-signalingServer.onerror = (error) => {
-    console.error("WebSocket error:", error);
-};
-
-signalingServer.onclose = () => {
-    console.log("WebSocket connection closed");
-};
+});
 
 // Create data channel and handle file reception
 peerConnection.ondatachannel = (event) => {
@@ -256,7 +228,7 @@ const createConnection = async () => {
 
     const offer = await peerConnection.createOffer();
     await peerConnection.setLocalDescription(offer);
-    signalingServer.send(JSON.stringify({ sdp: peerConnection.localDescription }));
+    signalingServer.emit("message", { sdp: peerConnection.localDescription });
     console.log("Offer sent:", peerConnection.localDescription);
 };
 
