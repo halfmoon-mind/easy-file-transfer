@@ -32,7 +32,6 @@ let receivedFileBuffers = {}; // Object to store received file chunks
 let currentFileMetadata = {}; // Object to store metadata of the current receiving file
 
 // Store registered users and files
-let registeredUsers = {};
 let uploadedFiles = {};
 
 // Register user on connection
@@ -102,7 +101,6 @@ const setupDataChannel = (channel) => {
             const metadata = JSON.parse(receivedData);
             currentFileMetadata = metadata;
             receivedFileBuffers[metadata.fileName] = [];
-            console.log("Received file metadata:", metadata);
         } else {
             const fileBuffer = receivedFileBuffers[currentFileMetadata.fileName];
             fileBuffer.push(receivedData);
@@ -110,10 +108,7 @@ const setupDataChannel = (channel) => {
 
             if (fileBuffer.reduce((acc, chunk) => acc + chunk.byteLength, 0) === currentFileMetadata.fileSize) {
                 const blob = new Blob(fileBuffer);
-                const fileName = currentFileMetadata.fileName;
-                receivedFiles.push({ name: fileName, blob: blob });
-                delete receivedFileBuffers[fileName];
-                updateReceivedFilesList();
+                const fileName = document.querySelector('input[name="receivedFile"]:checked').value;
                 saveFile(blob, fileName);
                 console.log("File received completely:", fileName);
             }
