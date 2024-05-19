@@ -1,4 +1,4 @@
-const signalingServer = io("http://10.28.200.86:8080");
+const signalingServer = io("http://43.201.24.121:8080");
 
 // Initialize RTCPeerConnection
 const peerConnection = new RTCPeerConnection({
