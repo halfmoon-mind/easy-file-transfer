@@ -4,8 +4,9 @@ const https = require("https");
 const socketIo = require("socket.io");
 const cors = require("cors");
 
-const privateKey = fs.readFileSync("key.pem", "utf8");
-const certificate = fs.readFileSync("cert.pem", "utf8");
+// Let's Encrypt에서 발급 받은 인증서와 키 파일 경로
+const privateKey = fs.readFileSync("/etc/letsencrypt/live/daitssu.com/privkey.pem", "utf8");
+const certificate = fs.readFileSync("/etc/letsencrypt/live/daitssu.com/fullchain.pem", "utf8");
 const credentials = { key: privateKey, cert: certificate };
 
 const app = express();
@@ -34,5 +35,5 @@ io.on("connection", (socket) => {
 });
 
 server.listen(8080, () => {
-    console.log("Signaling server is running on http://localhost:8080");
+    console.log("Signaling server is running on https://daitssu.com:8080");
 });
