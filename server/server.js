@@ -2,6 +2,7 @@ const express = require("express");
 const https = require("https");
 const socketIo = require("socket.io");
 const cors = require("cors");
+const fs = require("fs");
 
 // Let's Encrypt에서 발급 받은 인증서와 키 파일 경로
 const privateKey = fs.readFileSync("/home/ec2-user/easy-file-transfer/privkey.pem", "utf8");
