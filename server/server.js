@@ -72,3 +72,9 @@ server.listen(8080, () => {
 app.get("/", (req, res) => {
     res.send("HI");
 });
+
+app.get("/current-file", (req, res) => {
+    // get recently uploaded file
+    const fileName = Object.keys(uploadedFiles).pop();
+    res.json({ fileName, uploaderId: uploadedFiles[fileName] });
+});
