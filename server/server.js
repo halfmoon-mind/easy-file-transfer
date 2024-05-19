@@ -1,10 +1,14 @@
 const express = require("express");
-const http = require("http");
+const https = require("https");
 const socketIo = require("socket.io");
 const cors = require("cors");
 
+const privateKey = fs.readFileSync("key.pem", "utf8");
+const certificate = fs.readFileSync("cert.pem", "utf8");
+const credentials = { key: privateKey, cert: certificate };
+
 const app = express();
-const server = http.createServer(app);
+const server = https.createServer(credentials, app);
 const io = socketIo(server, {
     cors: {
         origin: "*", // 모든 출처 허용. 특정 출처만 허용하려면 여기에 출처를 지정
