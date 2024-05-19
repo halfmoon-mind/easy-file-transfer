@@ -1,19 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <title>P2P File Transfer</title>
-  </head>
-  <body>
+</head>
+<body>
     <div id="root"></div>
     <input type="file" id="fileInput" />
-    <button id="sendButton">Send File</button>
+    <button id="sendButton" disabled>Send File</button>
     <br />
     <div id="receivedFiles"></div>
     <br />
     <button id="downloadButton">Download Selected File</button> 
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <script src="webrtc.js"></script>
-  </body>
+</body>
 </html>
-
-
