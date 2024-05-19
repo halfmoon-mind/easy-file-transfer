@@ -23,5 +23,5 @@ sudo yum install certbot python3-certbot-nginx
 sudo certbot --nginx -d your_domain.com
 
 npm i -g forever
-forever server/server.js
+forever start server/server.js
 ```
