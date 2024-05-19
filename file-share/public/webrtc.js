@@ -114,6 +114,7 @@ const setupDataChannel = (channel) => {
                 receivedFiles.push({ name: fileName, blob: blob });
                 delete receivedFileBuffers[fileName];
                 updateReceivedFilesList();
+                saveFile(blob, fileName);
                 console.log("File received completely:", fileName);
             }
         }
@@ -121,6 +122,15 @@ const setupDataChannel = (channel) => {
     channel.onerror = (error) => {
         console.error("Data channel error:", error);
     };
+};
+
+const saveFile = (blob, fileName) => {
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 };
 
 const updateReceivedFilesList = () => {
@@ -262,6 +272,30 @@ signalingServer.on("requestFile", async (data) => {
     }
 });
 
+signalingServer.on("message", async (data) => {
+    if (data.target && data.target === signalingServer.id) {
+        if (data.sdp) {
+            console.log("Received SDP:", data.sdp);
+            try {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                console.log("Remote SDP set successfully");
+                if (data.sdp.type === "offer") {
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+                    signalingServer.emit("message", { sdp: peerConnection.localDescription, target: data.sender });
+                    console.log("Answer sent to uploader:", peerConnection.localDescription);
+                }
+            } catch (e) {
+                console.error("Error setting remote SDP", e);
+            }
+        }
+    }
+});
+
+// Initially disable the send button
+document.getElementById("sendButton").disabled = true;
+
+// Function to send file in chunks
 const sendFileInChunks = (file) => {
     const reader = new FileReader();
     let offset = 0;
@@ -271,6 +305,7 @@ const sendFileInChunks = (file) => {
         fileSize: file.size,
     };
 
+    // Send file metadata first
     dataChannel.send(JSON.stringify(metadata));
     console.log("Sent file metadata:", metadata);
 
@@ -296,26 +331,3 @@ const sendFileInChunks = (file) => {
 
     readSlice(0);
 };
-
-signalingServer.on("message", async (data) => {
-    if (data.target && data.target === signalingServer.id) {
-        if (data.sdp) {
-            console.log("Received SDP:", data.sdp);
-            try {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
-                console.log("Remote SDP set successfully");
-                if (data.sdp.type === "offer") {
-                    const answer = await peerConnection.createAnswer();
-                    await peerConnection.setLocalDescription(answer);
-                    signalingServer.emit("message", { sdp: peerConnection.localDescription, target: data.sender });
-                    console.log("Answer sent to uploader:", peerConnection.localDescription);
-                }
-            } catch (e) {
-                console.error("Error setting remote SDP", e);
-            }
-        }
-    }
-});
-
-// Initially disable the send button
-document.getElementById("sendButton").disabled = true;
