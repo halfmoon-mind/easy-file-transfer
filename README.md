@@ -9,7 +9,8 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 nvm install 20
 npm i ws
-node server.js
+npm i -g forever
+forever server.js
 ```
 
 ### Client

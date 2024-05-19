@@ -1,4 +1,4 @@
-const signalingServer = new WebSocket("ws://43.201.24.121:8080");
+const signalingServer = new WebSocket("wss://43.201.24.121:8080");
 
 // Initialize RTCPeerConnection
 const peerConnection = new RTCPeerConnection({
