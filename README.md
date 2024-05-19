@@ -26,10 +26,3 @@ sudo certbot --nginx -d your_domain.com
 npm i -g forever
 forever server.js
 ```
-
-### Client
-
-```sh
-# in client folder
-python3 -m http.server 8000
-```
