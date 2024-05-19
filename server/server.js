@@ -74,7 +74,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/current-file", (req, res) => {
-    // get recently uploaded file
+    // get recently uploaded file without remove it
     const fileName = Object.keys(uploadedFiles).pop();
-    res.json({ fileName, uploaderId: uploadedFiles[fileName] });
+    res.send({ fileName, uploaderId: uploadedFiles[fileName] });
 });
