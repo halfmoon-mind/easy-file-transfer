@@ -1,27 +1,16 @@
 # Easy File Transfer
 
-### Server
+### Why should we use this project?
+Imagine that you need to tranfer file from your laptop to your mobile device.
 
-```sh
-sudo yum install git nginx
+How can you do that?
 
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-nvm install 20
+Do you put your file to your google drive storage, and download in your app? After that, you need to remove that file for saving your google drive volume!
 
-git clone https://github.com/halfmoon-mind/easy-file-transfer.git
-cd easy-file-transfer
-npm i
+It's so bothering yourself.
 
-sudo vi /etc/nginx/sites-available/default
-# when in vi, save doesn't work use the following command
-# :w !sudo tee % > /dev/null
+So I made a website for you.
 
-sudo yum install certbot python3-certbot-nginx
-sudo certbot --nginx -d your_domain.com
+It's Easy file transfer website. You can upload your file and download with QR Code.
 
-npm i -g forever
-forever start server/server.js
-```
+Don't share whole file, just share link with your friend.
