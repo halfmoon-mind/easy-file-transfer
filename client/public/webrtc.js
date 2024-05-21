@@ -30,6 +30,7 @@ let receivedFileBuffers = {};
 let currentFileMetadata = {};
 let uploadedFiles = {};
 let progressBar = document.getElementById('progressBar');
+let iceCandidateQueue = [];
 
 signalingServer.on('connect', () => {
   const userId = signalingServer.id;
@@ -49,17 +50,30 @@ peerConnection.onicecandidate = (event) => {
 signalingServer.on('message', async (data) => {
   if (data.candidate) {
     console.log('Received ICE candidate:', data.candidate);
-    try {
-      await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-      console.log('ICE candidate added successfully');
-    } catch (e) {
-      console.error('Error adding received ICE candidate', e);
+    if (peerConnection.remoteDescription && peerConnection.remoteDescription.type) {
+      try {
+        await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+        console.log('ICE candidate added successfully');
+      } catch (e) {
+        console.error('Error adding received ICE candidate', e);
+      }
+    } else {
+      iceCandidateQueue.push(data.candidate);
     }
   } else if (data.sdp) {
     console.log('Received SDP:', data.sdp);
     try {
       await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
       console.log('Remote SDP set successfully');
+      while (iceCandidateQueue.length) {
+        const candidate = iceCandidateQueue.shift();
+        try {
+          await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+          console.log('Queued ICE candidate added successfully');
+        } catch (e) {
+          console.error('Error adding queued ICE candidate', e);
+        }
+      }
       if (data.sdp.type === 'offer') {
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
@@ -263,26 +277,6 @@ signalingServer.on('requestFile', async (data) => {
   }
 });
 
-signalingServer.on('message', async (data) => {
-  if (data.target && data.target === signalingServer.id) {
-    if (data.sdp) {
-      console.log('Received SDP:', data.sdp);
-      try {
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
-        console.log('Remote SDP set successfully');
-        if (data.sdp.type === 'offer') {
-          const answer = await peerConnection.createAnswer();
-          await peerConnection.setLocalDescription(answer);
-          signalingServer.emit('message', { sdp: peerConnection.localDescription, target: data.sender });
-          console.log('Answer sent to uploader:', peerConnection.localDescription);
-        }
-      } catch (e) {
-        console.error('Error setting remote SDP', e);
-      }
-    }
-  }
-});
-
 document.getElementById('sendButton').disabled = true;
 
 const sendFileInChunks = (file) => {
@@ -302,7 +296,7 @@ const sendFileInChunks = (file) => {
       const chunk = reader.result;
 
       const sendChunk = () => {
-        if (dataChannel.bufferedAmount < CHUNK_SIZE * 30) {
+        try {
           dataChannel.send(chunk);
           console.log('Chunk sent:', offset, chunk);
 
@@ -312,9 +306,10 @@ const sendFileInChunks = (file) => {
           } else {
             console.log('All chunks sent');
           }
-        } else {
-          console.log('Buffer is full, waiting...');
-          setTimeout(sendChunk, 100);
+        } catch (e) {
+          if (e.name === 'OperationError') {
+            setTimeout(sendChunk, 100);
+          }
         }
       };
 
