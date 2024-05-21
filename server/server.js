@@ -66,7 +66,7 @@ io.on("connection", (socket) => {
 });
 
 server.listen(8080, () => {
-    console.log("Signaling server is running on https://daitssu.com:8080");
+    console.log("Signaling server is running on https://easyfile.site:8080");
 });
 
 app.get("/", (req, res) => {
