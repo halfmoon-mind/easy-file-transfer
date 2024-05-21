@@ -302,8 +302,7 @@ const sendFileInChunks = (file) => {
       const chunk = reader.result;
 
       const sendChunk = () => {
-        if (dataChannel.bufferedAmount < CHUNK_SIZE * 20) {
-          // Allow a buffer of 10 chunks
+        if (dataChannel.bufferedAmount < CHUNK_SIZE * 30) {
           dataChannel.send(chunk);
           console.log('Chunk sent:', offset, chunk);
 
@@ -314,9 +313,8 @@ const sendFileInChunks = (file) => {
             console.log('All chunks sent');
           }
         } else {
-          // Wait until bufferedAmount is reduced before sending
           console.log('Buffer is full, waiting...');
-          setTimeout(sendChunk, 100); // Retry after 100ms
+          setTimeout(sendChunk, 100);
         }
       };
 
