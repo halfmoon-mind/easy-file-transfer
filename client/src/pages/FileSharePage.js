@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import Description from "../components/Description";
 import DownloadButton from "../components/DownloadButton";
-import qrcode from "qrcode-generator";
+import QRCode from "qrcode";
 
 const FileSharePage = () => {
     const { id } = useParams();
@@ -15,13 +15,9 @@ const FileSharePage = () => {
             const fileName = Math.random().toString(36).substring(7);
             window.location.href = `/file/${id}?name=${fileName}`;
         }
-        var typeNumber = 4;
-        var errorCorrectionLevel = "L";
-        var qr = qrcode(typeNumber, errorCorrectionLevel);
-        // set data current url
-        qr.addData(window.location.href);
-        qr.make();
-        document.getElementById("placeHolder").innerHTML = qr.createImgTag();
+        const canvas = document.getElementById("roomCode");
+        // black
+        QRCode.toCanvas(canvas, window.location.href, { color: { dark: "#000000" }, scale: 4, small: true });
     }, [id, name]);
 
     useEffect(() => {
@@ -60,7 +56,8 @@ const FileSharePage = () => {
                     <p>File transfer is not available</p>
                 </div>
             )}
-            <div id="placeHolder"></div>
+            <div id="qrcode"></div>
+            <canvas id="roomCode" style={{ borderRadius: 20 }}></canvas>
             <h2
                 style={{ cursor: "pointer" }}
                 onClick={() => {
