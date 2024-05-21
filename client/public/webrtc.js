@@ -1,4 +1,4 @@
-const signalingServer = io("https://easyfile.site:8080");
+const signalingServer = io("https://socket.easyfile.site:8080");
 
 let db;
 const request = indexedDB.open("fileTransferDB", 1);
