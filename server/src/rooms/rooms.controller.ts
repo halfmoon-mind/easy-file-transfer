@@ -1,0 +1,46 @@
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { RoomsService } from './rooms.service';
+import { File } from './room_model';
+
+@Controller('rooms')
+export class RoomsController {
+  constructor(private roomServices: RoomsService) {}
+
+  @Post('/create')
+  createRooms() {
+    return this.roomServices.createRoom();
+  }
+
+  @Get(':id')
+  getRoomById(@Param('id') id: string) {
+    return this.roomServices.getRoomById(id);
+  }
+
+  @Get()
+  getRooms() {
+    return this.roomServices.getRooms();
+  }
+
+  @Post(':roomId/add-user/:userId')
+  addUserToRoom(
+    @Param('roomId') roomId: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.roomServices.addUserToRoom(roomId, userId);
+  }
+
+  //upload file
+  @Post(':roomId/upload-file')
+  uploadFile(@Param('roomId') roomId: string, @Body() file: File) {
+    return this.roomServices.addFileToRoom(roomId, file);
+  }
+
+  //download file
+  @Get(':roomId/download-file/:fileName')
+  downloadFile(
+    @Param('roomId') roomId: string,
+    @Param('fileName') fileName: string,
+  ) {
+    return this.roomServices.downloadFile(roomId, fileName);
+  }
+}
