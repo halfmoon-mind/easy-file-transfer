@@ -1,10 +1,11 @@
-import React from "react";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import adapter from "webrtc-adapter";
+import "./App.css";
+
 import MainPage from "./pages/MainPage";
 import FileSharePage from "./pages/FileSharePage";
+import adapter from "webrtc-adapter";
+import { Route, Routes, BrowserRouter as Router } from "react-router-dom";
 
-const App = () => {
+function App() {
     return (
         <Router>
             <Routes>
@@ -13,5 +14,6 @@ const App = () => {
             </Routes>
         </Router>
     );
-};
+}
+
 export default App;

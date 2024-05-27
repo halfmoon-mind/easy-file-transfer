@@ -1,3 +1,5 @@
+import io from "socket.io-client";
+
 const signalingServer = io("https://easyfile.site:8080");
 
 let db;
