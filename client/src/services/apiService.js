@@ -1,9 +1,10 @@
 import axios from "axios";
 
-const BASE_URL = "http://localhost";
+const BASE_URL = "http://localhost:8080";
+const SOCKET_BASE_URL = "http://localhost:8081";
 
 const apiService = axios.create({
-    baseURL: BASE_URL + ":8080",
+    baseURL: BASE_URL,
     timeout: 10000,
 });
 
@@ -32,4 +33,4 @@ apiService.interceptors.response.use(
 );
 
 export default apiService;
-export { BASE_URL };
+export { BASE_URL, SOCKET_BASE_URL };
