@@ -3,8 +3,10 @@
 const Description = () => {
     return (
         <div className="description">
-            <h1>Share files with your friends</h1>
-            <p>Send files directly to your friends without uploading to a server.</p>
+            <h1>쉽게 파일 공유하기 : EASY FILE</h1>
+            <p>1. 방을 만들어주세요</p>
+            <p>2. 안에서 파일을 업로드해주세요</p>
+            <p>주의 : 접속을 종료하면 파일 공유가 중단됩니다!</p>
         </div>
     );
 };

@@ -1,24 +1,50 @@
 import { useEffect, useState } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import Description from "../components/Description";
 import DownloadButton from "../components/DownloadButton";
+import "react-dropzone-uploader/dist/styles.css";
 import QRCode from "qrcode";
+import Dropzone from "react-dropzone-uploader";
+
+const Standard = () => {
+    const getUploadParams = () => {
+        return { url: "http://localhost:8080/rooms/asdasd/upload-file" };
+    };
+
+    const handleChangeStatus = ({ meta }, status) => {
+        console.log(status, meta);
+    };
+
+    const handleSubmit = (files, allFiles) => {
+        console.log(files.map((f) => f.meta));
+        allFiles.forEach((f) => f.remove());
+    };
+
+    return (
+        <Dropzone
+            getUploadParams={getUploadParams}
+            onChangeStatus={handleChangeStatus}
+            onSubmit={handleSubmit}
+            styles={{ dropzone: { minHeight: 200, maxHeight: 250 } }}
+            inputLabel="DRAG FILE TO UPLOAD"
+        />
+    );
+};
 
 const FileSharePage = () => {
     const { id } = useParams();
-    const queryParameters = new URLSearchParams(useLocation().search);
-    const name = queryParameters.get("name");
     const [isHosting, setHosting] = useState(false);
 
     useEffect(() => {
-        if (!name) {
-            const fileName = Math.random().toString(36).substring(7);
-            window.location.href = `/file/${id}?name=${fileName}`;
-        }
+        // set QR code
         const canvas = document.getElementById("roomCode");
-        // black
         QRCode.toCanvas(canvas, window.location.href, { color: { dark: "#000000" }, scale: 4, small: true });
-    }, [id, name]);
+
+        const script = document.createElement("script");
+        script.src = "https://cdn.socket.io/4.0.0/socket.io.min.js";
+        script.async = true;
+        document.body.appendChild(script);
+    }, [id]);
 
     useEffect(() => {
         const updateHostingStatus = () => {
@@ -29,7 +55,6 @@ const FileSharePage = () => {
 
     const handleDownloadClick = () => {
         console.log("Download button clicked");
-        // get random true or false
         setHosting(Math.random() < 0.5);
     };
 
@@ -37,11 +62,11 @@ const FileSharePage = () => {
         <div>
             <h1>File Share Page</h1>
             <h1>ID : {id}</h1>
-            <h1>File Name : {name}</h1>
-            <DownloadButton id={id} onClick={handleDownloadClick} />
+            {/* <DownloadButton id={id} onClick={handleDownloadClick} /> */}
             <Description />
+            <Standard />
 
-            {isHosting ? (
+            {/* {isHosting ? (
                 <div>
                     <h2>File Transfer</h2>
                     <input type="file" id="fileInput" />
@@ -55,7 +80,7 @@ const FileSharePage = () => {
                     <h2>File Transfer</h2>
                     <p>File transfer is not available</p>
                 </div>
-            )}
+            )} */}
             <div id="qrcode"></div>
             <canvas id="roomCode" style={{ borderRadius: 20 }}></canvas>
             <h2

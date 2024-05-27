@@ -29,18 +29,8 @@ export class RoomsController {
     return this.roomServices.addUserToRoom(roomId, userId);
   }
 
-  //upload file
   @Post(':roomId/upload-file')
   uploadFile(@Param('roomId') roomId: string, @Body() file: File) {
     return this.roomServices.addFileToRoom(roomId, file);
-  }
-
-  //download file
-  @Get(':roomId/download-file/:fileName')
-  downloadFile(
-    @Param('roomId') roomId: string,
-    @Param('fileName') fileName: string,
-  ) {
-    return this.roomServices.downloadFile(roomId, fileName);
   }
 }
