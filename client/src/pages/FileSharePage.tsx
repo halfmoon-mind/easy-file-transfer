@@ -43,10 +43,15 @@ const FileSharePage = () => {
     const canvas = document.getElementById('roomCode');
     QRCode.toCanvas(canvas, window.location.href, { color: { dark: '#000000' }, scale: 4 });
 
-    const script = document.createElement('script');
-    script.src = 'https://cdn.socket.io/4.0.0/socket.io.min.js';
-    script.async = true;
-    document.body.appendChild(script);
+    const adapterScript = document.createElement('script');
+    adapterScript.src = 'https://webrtc.github.io/adapter/adapter-latest.js';
+    adapterScript.async = true;
+    document.body.appendChild(adapterScript);
+
+    const socketScript = document.createElement('script');
+    socketScript.src = 'https://cdn.socket.io/4.0.0/socket.io.min.js';
+    socketScript.async = true;
+    document.body.appendChild(socketScript);
 
     const socket = io(SOCKET_BASE_URL);
     socket.on('connect', () => {
