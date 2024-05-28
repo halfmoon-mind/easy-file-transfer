@@ -6,6 +6,7 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { RoomsService } from 'src/rooms/rooms.service';
 
 @WebSocketGateway(8081, { cors: true })
 export class WebsocketGateway
@@ -29,6 +30,10 @@ export class WebsocketGateway
     this.server
       .to(room)
       .emit('roomStatus', `User ${client.id} joined room ${room}`);
+    // room service add user to room
+    const roomService = new RoomsService();
+    roomService.addUserToRoom(room, client.id);
+
     console.log(`Client ${client.id} joined room ${room}`);
   }
 
@@ -47,5 +52,15 @@ export class WebsocketGateway
     message: { room: string; content: string },
   ): void {
     this.server.to(message.room).emit('newMessage', message.content);
+  }
+
+  // user count
+  @SubscribeMessage('userCount')
+  handleUserCount(client: Socket, room: string): void {
+    const roomClients = this.server.sockets.adapter.rooms.get(room);
+    console.log('roomClients', roomClients);
+    if (roomClients) {
+      client.emit('userCount', roomClients.size);
+    }
   }
 }

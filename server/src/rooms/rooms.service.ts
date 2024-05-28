@@ -41,6 +41,7 @@ export class RoomsService {
       return null;
     }
     room.users.push({ id: userId });
+    console.log('ADD USER TO ROOM', room.users);
     return room;
   }
 
