@@ -1,6 +1,11 @@
+# 이지 파일
+
+### 왜 이 프로젝트가 좋은가요?
+
 # Easy File Transfer
 
 ### Why should we use this project?
+
 Imagine that you need to tranfer file from your laptop to your mobile device.
 
 How can you do that?
