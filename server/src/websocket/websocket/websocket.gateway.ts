@@ -6,7 +6,6 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { RoomsService } from 'src/rooms/rooms.service';
 
 @WebSocketGateway(8081, { cors: true })
 export class WebsocketGateway
@@ -22,6 +21,7 @@ export class WebsocketGateway
 
   handleDisconnect(client: Socket) {
     console.log(`Client disconnected: ${client.id}`);
+    this.updateUserCount(client);
   }
 
   @SubscribeMessage('joinRoom')
@@ -30,10 +30,7 @@ export class WebsocketGateway
     this.server
       .to(room)
       .emit('roomStatus', `User ${client.id} joined room ${room}`);
-    // room service add user to room
-    const roomService = new RoomsService();
-    roomService.addUserToRoom(room, client.id);
-
+    this.updateUserCount(client);
     console.log(`Client ${client.id} joined room ${room}`);
   }
 
@@ -43,6 +40,7 @@ export class WebsocketGateway
     this.server
       .to(room)
       .emit('roomStatus', `User ${client.id} left room ${room}`);
+    this.updateUserCount(client);
     console.log(`Client ${client.id} left room ${room}`);
   }
 
@@ -54,7 +52,6 @@ export class WebsocketGateway
     this.server.to(message.room).emit('newMessage', message.content);
   }
 
-  // user count
   @SubscribeMessage('userCount')
   handleUserCount(client: Socket, room: string): void {
     const roomClients = this.server.sockets.adapter.rooms.get(room);
@@ -62,5 +59,15 @@ export class WebsocketGateway
     if (roomClients) {
       client.emit('userCount', roomClients.size);
     }
+  }
+
+  updateUserCount(client: Socket): void {
+    const rooms = Array.from(client.rooms).filter((room) => room !== client.id);
+    rooms.forEach((room) => {
+      const roomClients = this.server.sockets.adapter.rooms.get(room);
+      if (roomClients) {
+        this.server.to(room).emit('userCount', roomClients.size);
+      }
+    });
   }
 }
