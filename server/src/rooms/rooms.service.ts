@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Room, File } from './room_model';
+import { Room, FileData } from './room_model';
 
 @Injectable()
 export class RoomsService {
@@ -41,7 +41,6 @@ export class RoomsService {
       return null;
     }
     room.users.push({ id: userId });
-    console.log('ADD USER TO ROOM', room.users);
     return room;
   }
 
@@ -69,7 +68,7 @@ export class RoomsService {
   }
 
   // add file to the room
-  addFileToRoom(roomId: string, file: File) {
+  addFileToRoom(roomId: string, file: FileData) {
     const room = this.rooms.find((room) => room.id === roomId);
     if (!room) {
       return null;

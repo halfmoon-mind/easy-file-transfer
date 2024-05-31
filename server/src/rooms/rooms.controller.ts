@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { RoomsService } from './rooms.service';
-import { File } from './room_model';
+import { FileData } from './room_model';
 
 @Controller('rooms')
 export class RoomsController {
@@ -30,7 +30,7 @@ export class RoomsController {
   }
 
   @Post(':roomId/upload-file')
-  uploadFile(@Param('roomId') roomId: string, @Body() file: File) {
+  uploadFile(@Param('roomId') roomId: string, @Body() file: FileData) {
     return this.roomServices.addFileToRoom(roomId, file);
   }
 }
