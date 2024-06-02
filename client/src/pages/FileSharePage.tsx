@@ -6,8 +6,18 @@ import { FileUploader } from "react-drag-drop-files";
 import CopyLink from "../components/FileShare/CopyLink";
 import DownloadButton from "../components/DownloadButton";
 import socketService from "../services/socketService";
+import apiService from "../services/apiService";
+import { Room } from "@/types/Room";
 
-const FileUploadComponent = ({ fileList, setFileList }: { fileList: File[]; setFileList: (fileList: File[]) => void }) => {
+const FileUploadComponent = ({
+    fileList,
+    setFileList,
+    onUploadFile,
+}: {
+    fileList: File[];
+    setFileList: (fileList: File[]) => void;
+    onUploadFile: (fileList: File[]) => void;
+}) => {
     return (
         <div>
             <FileUploader
@@ -15,12 +25,14 @@ const FileUploadComponent = ({ fileList, setFileList }: { fileList: File[]; setF
                 multiple={true}
                 label="UPLOAD HERE"
                 onDrop={(files: File[]) => {
-                    console.log(files);
+                    // console.log(files);
                     setFileList([...fileList, ...files]);
+                    onUploadFile(files);
                 }}
                 onSelect={(files: File[]) => {
-                    console.log(files);
+                    // console.log(files);
                     setFileList([...fileList, ...files]);
+                    onUploadFile(files);
                 }}
             />
         </div>
@@ -32,8 +44,16 @@ const FileSharePage = () => {
     const [fileList, setFileList] = useState<File[]>([]);
     const [userCount, setUserCount] = useState(0);
 
-    const handleRefreshFileList = () => {
-        socketService.emit("roomStatus", id);
+    const handleRefreshRoomStatus = async () => {
+        const room = await apiService.get<Room>(`/rooms/${id}`);
+        try {
+            if (room.data) {
+                console.log(room.data);
+                setUserCount(room.data.users.length);
+            }
+        } catch (error) {
+            console.error(error);
+        }
     };
 
     useEffect(() => {
@@ -58,14 +78,19 @@ const FileSharePage = () => {
 
         socketService.connect(id);
 
-        socketService.on("userCount", (count: number) => {
-            setUserCount(count);
+        socketService.on("roomStatus", () => {
+            handleRefreshRoomStatus();
         });
 
         return () => {
             socketService.disconnect();
         };
     }, [id]);
+
+    const handleUploadFile = async (files: File[]) => {
+        const result = await apiService.post(`/rooms/${id}/upload`, { files: files });
+        console.log(result);
+    };
 
     return (
         <div>
@@ -80,9 +105,15 @@ const FileSharePage = () => {
             <h1>ID : {id}</h1>
             <Description />
             <ConnectedUser count={userCount} />
-            <FileUploadComponent fileList={fileList} setFileList={setFileList} />
+            <FileUploadComponent
+                fileList={fileList}
+                setFileList={setFileList}
+                onUploadFile={(files: File[]) => {
+                    handleUploadFile(files);
+                }}
+            />
             <div
-                onClick={handleRefreshFileList}
+                onClick={handleRefreshRoomStatus}
                 style={{
                     cursor: "pointer",
                     backgroundColor: "lightgray",

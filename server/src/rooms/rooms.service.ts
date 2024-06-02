@@ -36,12 +36,11 @@ export class RoomsService {
 
   // add user to the room
   addUserToRoom(roomId: string, userId: string) {
-    const room = this.rooms.find((room) => room.id === roomId);
+    let room = this.rooms.find((room) => room.id === roomId);
     if (!room) {
-      return null;
+      room = this.createRoom();
     }
     room.users.push({ id: userId });
-    console.log('ADD USER TO ROOM', room.users);
     return room;
   }
 
@@ -75,6 +74,7 @@ export class RoomsService {
       return null;
     }
     room.files.push(file);
+    console.log('room' + room);
     return room;
   }
 

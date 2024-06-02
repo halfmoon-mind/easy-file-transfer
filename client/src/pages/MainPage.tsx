@@ -1,6 +1,4 @@
 import React, { useState } from "react";
-import FileInput from "../components/FileInput";
-import SendButton from "../components/SendButton";
 import "../assets/styles/MainPage.css";
 
 import Description from "../components/Description";

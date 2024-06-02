@@ -6,7 +6,7 @@ import { File } from './room_model';
 export class RoomsController {
   constructor(private roomServices: RoomsService) {}
 
-  @Post('/create')
+  @Post('create')
   createRooms() {
     return this.roomServices.createRoom();
   }
@@ -21,16 +21,18 @@ export class RoomsController {
     return this.roomServices.getRooms();
   }
 
-  @Post(':roomId/add-user/:userId')
-  addUserToRoom(
-    @Param('roomId') roomId: string,
-    @Param('userId') userId: string,
-  ) {
+  @Post(':roomId/upload-file')
+  uploadFile(@Param('roomId') roomId: string, @Body() file: File) {
+    return this.roomServices.addFileToRoom(roomId, file);
+  }
+
+  @Post(':roomId/join')
+  addUserToRoom(@Param('roomId') roomId: string, @Body() userId: string) {
     return this.roomServices.addUserToRoom(roomId, userId);
   }
 
-  @Post(':roomId/upload-file')
-  uploadFile(@Param('roomId') roomId: string, @Body() file: File) {
+  @Post(':roomId/upload')
+  uploadFileToRoom(@Param('roomId') roomId: string, @Body() file: File) {
     return this.roomServices.addFileToRoom(roomId, file);
   }
 }

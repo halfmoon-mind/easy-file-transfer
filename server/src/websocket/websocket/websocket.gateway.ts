@@ -21,7 +21,7 @@ export class WebsocketGateway
 
   handleDisconnect(client: Socket) {
     console.log(`Client disconnected: ${client.id}`);
-    this.updateUserCount(client);
+    this.leaveAllRooms(client);
   }
 
   @SubscribeMessage('joinRoom')
@@ -30,7 +30,7 @@ export class WebsocketGateway
     this.server
       .to(room)
       .emit('roomStatus', `User ${client.id} joined room ${room}`);
-    this.updateUserCount(client);
+
     console.log(`Client ${client.id} joined room ${room}`);
   }
 
@@ -40,7 +40,7 @@ export class WebsocketGateway
     this.server
       .to(room)
       .emit('roomStatus', `User ${client.id} left room ${room}`);
-    this.updateUserCount(client);
+
     console.log(`Client ${client.id} left room ${room}`);
   }
 
@@ -52,6 +52,11 @@ export class WebsocketGateway
     this.server.to(message.room).emit('newMessage', message.content);
   }
 
+  @SubscribeMessage('roomStatus')
+  handleRoomStatus(client: Socket, room: string): void {
+    client.emit('roomStatus', `User ${client.id} is in room ${room}`);
+  }
+
   @SubscribeMessage('userCount')
   handleUserCount(client: Socket, room: string): void {
     const roomClients = this.server.sockets.adapter.rooms.get(room);
@@ -61,13 +66,15 @@ export class WebsocketGateway
     }
   }
 
-  updateUserCount(client: Socket): void {
+  leaveAllRooms(client: Socket): void {
     const rooms = Array.from(client.rooms).filter((room) => room !== client.id);
     rooms.forEach((room) => {
-      const roomClients = this.server.sockets.adapter.rooms.get(room);
-      if (roomClients) {
-        this.server.to(room).emit('userCount', roomClients.size);
-      }
+      client.leave(room);
+    });
+    rooms.forEach((room) => {
+      this.server
+        .to(room)
+        .emit('roomStatus', `User ${client.id} left room ${room}`);
     });
   }
 }
