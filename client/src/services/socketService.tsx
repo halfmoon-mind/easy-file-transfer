@@ -1,6 +1,5 @@
 import { io, Socket } from "socket.io-client";
 import { SOCKET_BASE_URL } from "./apiService";
-import { PostRoomJoin } from "../apis/RoomApi";
 
 class SocketService {
     socket: Socket | null = null;
@@ -8,17 +7,18 @@ class SocketService {
     connect(roomId: string) {
         this.socket = io(SOCKET_BASE_URL);
 
+        console.log("Connecting to socket server");
+
         this.socket.on("connect", async () => {
             console.log("Connected to socket server");
+            console.log("socket id : ", this.socket?.id);
             this.socket?.emit("joinRoom", roomId);
-            await PostRoomJoin(roomId);
-            this.socket?.emit("roomStatus");
         });
     }
 
-    disconnect() {
+    disconnect(roomId: string) {
         if (this.socket) {
-            this.socket.emit("leaveRoom");
+            this.socket.emit("leaveRoom", roomId);
             this.socket.disconnect();
         }
     }

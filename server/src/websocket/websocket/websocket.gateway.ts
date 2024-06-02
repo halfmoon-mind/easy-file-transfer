@@ -6,6 +6,7 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { RoomsService } from 'src/rooms/rooms.service';
 
 @WebSocketGateway(8081, { cors: true })
 export class WebsocketGateway
@@ -13,6 +14,8 @@ export class WebsocketGateway
 {
   @WebSocketServer()
   server: Server;
+
+  constructor(private readonly roomsService: RoomsService) {}
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   handleConnection(client: Socket, ..._args: any[]) {
@@ -25,23 +28,14 @@ export class WebsocketGateway
   }
 
   @SubscribeMessage('joinRoom')
-  handleJoinRoom(client: Socket, room: string): void {
-    client.join(room);
-    this.server
-      .to(room)
-      .emit('roomStatus', `User ${client.id} joined room ${room}`);
+  handleJoinRoom(client: Socket, roomId: string): void {
+    client.join(roomId);
 
-    console.log(`Client ${client.id} joined room ${room}`);
-  }
+    this.roomsService.addUserToRoom(roomId, client.id);
 
-  @SubscribeMessage('leaveRoom')
-  handleLeaveRoom(client: Socket, room: string): void {
-    client.leave(room);
-    this.server
-      .to(room)
-      .emit('roomStatus', `User ${client.id} left room ${room}`);
-
-    console.log(`Client ${client.id} left room ${room}`);
+    const roomData = this.roomsService.getRoomById(roomId);
+    console.log(`ROOM :roomData`, roomData);
+    this.server.to(roomId).emit('roomStatus', roomData);
   }
 
   @SubscribeMessage('sendMessage')
@@ -53,8 +47,9 @@ export class WebsocketGateway
   }
 
   @SubscribeMessage('roomStatus')
-  handleRoomStatus(client: Socket, room: string): void {
-    client.emit('roomStatus', `User ${client.id} is in room ${room}`);
+  handleRoomStatus(client: Socket, roomId: string): void {
+    const room = this.roomsService.getRoomById(roomId);
+    this.server.to(roomId).emit('roomStatus', room);
   }
 
   @SubscribeMessage('userCount')
@@ -67,14 +62,18 @@ export class WebsocketGateway
   }
 
   leaveAllRooms(client: Socket): void {
-    const rooms = Array.from(client.rooms).filter((room) => room !== client.id);
+    console.log(`Client ${client.id} left all rooms`);
+    this.roomsService.removeUserFromRoom(client.id);
+
+    const rooms = this.roomsService.getRooms();
+
     rooms.forEach((room) => {
-      client.leave(room);
-    });
-    rooms.forEach((room) => {
-      this.server
-        .to(room)
-        .emit('roomStatus', `User ${client.id} left room ${room}`);
+      if (room.users.includes({ id: client.id })) {
+        this.server
+          .to(room.id)
+          .emit('roomStatus', this.roomsService.getRoomById(room.id));
+      }
+      client.leave(room.id);
     });
   }
 }

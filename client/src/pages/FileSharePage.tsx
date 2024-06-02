@@ -7,53 +7,50 @@ import CopyLink from "../components/FileShare/CopyLink";
 import DownloadButton from "../components/DownloadButton";
 import socketService from "../services/socketService";
 import apiService from "../services/apiService";
-import { Room } from "@/types/Room";
+import { FileData, Room } from "@/types/Room";
 
-const FileUploadComponent = ({
-    fileList,
-    setFileList,
-    onUploadFile,
-}: {
-    fileList: File[];
-    setFileList: (fileList: File[]) => void;
-    onUploadFile: (fileList: File[]) => void;
-}) => {
-    return (
-        <div>
-            <FileUploader
-                name="file"
-                multiple={true}
-                label="UPLOAD HERE"
-                onDrop={(files: File[]) => {
-                    // console.log(files);
-                    setFileList([...fileList, ...files]);
-                    onUploadFile(files);
-                }}
-                onSelect={(files: File[]) => {
-                    // console.log(files);
-                    setFileList([...fileList, ...files]);
-                    onUploadFile(files);
-                }}
-            />
-        </div>
-    );
-};
+// const FileUploadComponent = ({
+//     fileList,
+//     setFileList,
+//     onUploadFile,
+// }: {
+//     fileList: File[];
+//     setFileList: (fileList: File[]) => void;
+//     onUploadFile: (fileList: File[]) => void;
+// }) => {
+//     return (
+//         <div>
+//             <FileUploader
+//                 name="file"
+//                 multiple={true}
+//                 label="UPLOAD HERE"
+//                 onDrop={(files: File[]) => {
+//                     setFileList([...fileList, ...files]);
+//                     onUploadFile(files);
+//                 }}
+//                 onSelect={(files: File[]) => {
+//                     setFileList([...fileList, ...files]);
+//                     onUploadFile(files);
+//                 }}
+//             />
+//         </div>
+//     );
+// };
 
 const FileSharePage = () => {
     const { id } = useParams();
-    const [fileList, setFileList] = useState<File[]>([]);
+    const [fileList, setFileList] = useState<FileData[]>([]);
     const [userCount, setUserCount] = useState(0);
 
-    const handleRefreshRoomStatus = async () => {
-        const room = await apiService.get<Room>(`/rooms/${id}`);
-        try {
-            if (room.data) {
-                console.log(room.data);
-                setUserCount(room.data.users.length);
-            }
-        } catch (error) {
-            console.error(error);
-        }
+    const handleRefreshRoomStatus = async (data: Room) => {
+        const room = data;
+        console.log(room);
+        setFileList(room.files);
+        setUserCount(room.users.length);
+    };
+
+    const refreshRoomStatus = () => {
+        socketService.emit("roomStatus", id);
     };
 
     useEffect(() => {
@@ -78,19 +75,19 @@ const FileSharePage = () => {
 
         socketService.connect(id);
 
-        socketService.on("roomStatus", () => {
-            handleRefreshRoomStatus();
+        socketService.on("roomStatus", (data) => {
+            handleRefreshRoomStatus(data);
         });
 
         return () => {
-            socketService.disconnect();
+            socketService.disconnect(id);
         };
     }, [id]);
 
-    const handleUploadFile = async (files: File[]) => {
-        const result = await apiService.post(`/rooms/${id}/upload`, { files: files });
-        console.log(result);
-    };
+    // const handleUploadFile = async (files: File[]) => {
+    //     const result = await apiService.post(`/rooms/${id}/upload`, { files: files });
+    //     console.log(result);
+    // };
 
     return (
         <div>
@@ -105,15 +102,15 @@ const FileSharePage = () => {
             <h1>ID : {id}</h1>
             <Description />
             <ConnectedUser count={userCount} />
-            <FileUploadComponent
+            {/* <FileUploadComponent
                 fileList={fileList}
                 setFileList={setFileList}
                 onUploadFile={(files: File[]) => {
                     handleUploadFile(files);
                 }}
-            />
+            /> */}
             <div
-                onClick={handleRefreshRoomStatus}
+                onClick={refreshRoomStatus}
                 style={{
                     cursor: "pointer",
                     backgroundColor: "lightgray",
@@ -126,7 +123,7 @@ const FileSharePage = () => {
             >
                 파일 리프레시
             </div>
-            <FileDownLoadComponent fileList={fileList} />
+            {/* <FileDownLoadComponent fileList={fileList} /> */}
 
             <h1>QR 코드로 공유하기</h1>
             <canvas id="roomCode" style={{ borderRadius: 20 }}></canvas>

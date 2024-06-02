@@ -8,7 +8,7 @@ const MainPage = () => {
     const [roomId, setRoomId] = useState("");
 
     const handleMakeRoom = async () => {
-        const result = await apiService.post("rooms/create");
+        const result = await apiService.post("/rooms/create");
         const id = result.data.id;
         window.location.href = `/rooms/${id}`;
     };
