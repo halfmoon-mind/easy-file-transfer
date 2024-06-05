@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
-import Description from "../components/Description";
 import QRCode from "qrcode";
 import { FileUploader } from "react-drag-drop-files";
 import CopyLink from "../components/FileShare/CopyLink";
@@ -9,42 +8,16 @@ import socketService from "../services/socketService";
 import apiService from "../services/apiService";
 import { FileData, Room } from "@/types/Room";
 
-// const FileUploadComponent = ({
-//     fileList,
-//     setFileList,
-//     onUploadFile,
-// }: {
-//     fileList: File[];
-//     setFileList: (fileList: File[]) => void;
-//     onUploadFile: (fileList: File[]) => void;
-// }) => {
-//     return (
-//         <div>
-//             <FileUploader
-//                 name="file"
-//                 multiple={true}
-//                 label="UPLOAD HERE"
-//                 onDrop={(files: File[]) => {
-//                     setFileList([...fileList, ...files]);
-//                     onUploadFile(files);
-//                 }}
-//                 onSelect={(files: File[]) => {
-//                     setFileList([...fileList, ...files]);
-//                     onUploadFile(files);
-//                 }}
-//             />
-//         </div>
-//     );
-// };
-
 const FileSharePage = () => {
     const { id } = useParams();
     const [fileList, setFileList] = useState<FileData[]>([]);
     const [userCount, setUserCount] = useState(0);
+    const [peerConnection, setPeerConnection] = useState<RTCPeerConnection | null>(null);
+    const [dataChannel, setDataChannel] = useState<RTCDataChannel | null>(null);
+    const fileInputRef = useRef(null);
 
     const handleRefreshRoomStatus = async (data: Room) => {
         const room = data;
-        console.log(room);
         setFileList(room.files);
         setUserCount(room.users.length);
     };
@@ -79,15 +52,61 @@ const FileSharePage = () => {
             handleRefreshRoomStatus(data);
         });
 
+        socketService.on("offer", async (offer) => {
+            const peerConnection = new RTCPeerConnection();
+            setPeerConnection(peerConnection);
+
+            peerConnection.ondatachannel = (event) => {
+                const receiveChannel = event.channel;
+                receiveChannel.onmessage = (event) => {
+                    console.log("File received: ", event.data);
+                    // 여기서 파일을 처리하는 로직을 추가합니다.
+                };
+                setDataChannel(receiveChannel);
+            };
+
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+
+            socketService.emit("answer", { answer, roomId: id });
+        });
+
+        socketService.on("answer", async (answer) => {
+            if (peerConnection) {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+            }
+        });
+
         return () => {
             socketService.disconnect(id);
         };
     }, [id]);
 
-    // const handleUploadFile = async (files: File[]) => {
-    //     const result = await apiService.post(`/rooms/${id}/upload`, { files: files });
-    //     console.log(result);
-    // };
+    const handleFileUpload = async (files: File[]) => {
+        const formData = new FormData();
+        formData.append("file", files[0]);
+        await apiService.post(`/rooms/${id}/upload`, formData);
+        refreshRoomStatus();
+    };
+
+    const handleFileDownload = async (file: FileData) => {
+        const peerConnection = new RTCPeerConnection();
+        setPeerConnection(peerConnection);
+
+        const dataChannel = peerConnection.createDataChannel("fileTransfer");
+        setDataChannel(dataChannel);
+
+        dataChannel.onopen = () => {
+            console.log("Data channel opened");
+            // P2P 파일 전송 로직을 여기에 추가합니다.
+        };
+
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+
+        socketService.emit("offer", { offer, roomId: id });
+    };
 
     return (
         <div>
@@ -100,15 +119,15 @@ const FileSharePage = () => {
                 File Share Page
             </h1>
             <h1>ID : {id}</h1>
-            <Description />
             <ConnectedUser count={userCount} />
-            {/* <FileUploadComponent
-                fileList={fileList}
-                setFileList={setFileList}
-                onUploadFile={(files: File[]) => {
-                    handleUploadFile(files);
-                }}
-            /> */}
+            <FileUploader
+                ref={fileInputRef}
+                name="file"
+                multiple={true}
+                label="UPLOAD HERE"
+                onDrop={(files: File[]) => handleFileUpload(files)}
+                onSelect={(files: File[]) => handleFileUpload(files)}
+            />
             <div
                 onClick={refreshRoomStatus}
                 style={{
@@ -123,8 +142,7 @@ const FileSharePage = () => {
             >
                 파일 리프레시
             </div>
-            {/* <FileDownLoadComponent fileList={fileList} /> */}
-
+            <FileDownLoadComponent fileList={fileList} onDownload={handleFileDownload} />
             <h1>QR 코드로 공유하기</h1>
             <canvas id="roomCode" style={{ borderRadius: 20 }}></canvas>
             <CopyLink />
@@ -136,24 +154,17 @@ const ConnectedUser = ({ count }: { count: number }) => {
     return <h1>Connected User : {count}</h1>;
 };
 
-const FileDownLoadComponent = ({ fileList }: { fileList: File[] }) => {
-    const handleDownLoad = () => {
-        console.log("Download");
-    };
-
+const FileDownLoadComponent = ({ fileList, onDownload }: { fileList: FileData[]; onDownload: (file: FileData) => void }) => {
     return (
         <div>
             {fileList.map((file, index) => {
                 return (
                     <div key={index}>
-                        <a href={URL.createObjectURL(file)} download={file.name}>
-                            <img width={20} height={20} src={URL.createObjectURL(file)} alt={file.name} />
-                            {file.name}
-                        </a>
+                        <span>{file.file.name}</span>
+                        <DownloadButton onClick={() => onDownload(file)} />
                     </div>
                 );
             })}
-            <DownloadButton onClick={handleDownLoad} />
         </div>
     );
 };

@@ -30,11 +30,9 @@ export class WebsocketGateway
   @SubscribeMessage('joinRoom')
   handleJoinRoom(client: Socket, roomId: string): void {
     client.join(roomId);
-
     this.roomsService.addUserToRoom(roomId, client.id);
 
     const roomData = this.roomsService.getRoomById(roomId);
-    console.log(`ROOM :roomData`, roomData);
     this.server.to(roomId).emit('roomStatus', roomData);
   }
 
@@ -52,13 +50,30 @@ export class WebsocketGateway
     this.server.to(roomId).emit('roomStatus', room);
   }
 
-  @SubscribeMessage('userCount')
-  handleUserCount(client: Socket, room: string): void {
-    const roomClients = this.server.sockets.adapter.rooms.get(room);
-    console.log('roomClients', roomClients);
-    if (roomClients) {
-      client.emit('userCount', roomClients.size);
-    }
+  @SubscribeMessage('offer')
+  handleOffer(
+    client: Socket,
+    { offer, roomId }: { offer: RTCSessionDescriptionInit; roomId: string },
+  ): void {
+    this.server.to(roomId).emit('offer', offer);
+  }
+
+  @SubscribeMessage('answer')
+  handleAnswer(
+    client: Socket,
+    { answer, roomId }: { answer: RTCSessionDescriptionInit; roomId: string },
+  ): void {
+    this.server.to(roomId).emit('answer', answer);
+  }
+
+  @SubscribeMessage('fileUploaded')
+  handleFileUploaded(
+    client: Socket,
+    { fileName, roomId }: { fileName: string; roomId: string },
+  ): void {
+    this.roomsService.addFileToRoom(roomId, { name: fileName });
+    const roomData = this.roomsService.getRoomById(roomId);
+    this.server.to(roomId).emit('roomStatus', roomData);
   }
 
   leaveAllRooms(client: Socket): void {

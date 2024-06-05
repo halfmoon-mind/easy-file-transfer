@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Room } from './room_model';
+import { FileData, Room } from './room_model';
 
 @Injectable()
 export class RoomsService {
@@ -8,11 +8,7 @@ export class RoomsService {
   getRooms() {
     return this.rooms;
   }
-  /**
-   * id로 방을 찾아서 반환
-   * @param id 방의 id 값
-   * @returns Room 객체
-   */
+
   getRoomById(id: string) {
     const room = this.rooms.find((room) => room.id === id);
     if (!room) {
@@ -27,10 +23,6 @@ export class RoomsService {
     return room;
   }
 
-  /**
-   * 방 생성
-   * @returns 생성된 Room 객체
-   */
   createRoom(id: string | undefined) {
     if (id) {
       const room = this.rooms.find((room) => room.id === id);
@@ -65,15 +57,12 @@ export class RoomsService {
     let room = this.rooms.find((room) => room.id === roomId);
 
     if (!room) {
-      console.log('room not found');
       room = this.createRoom(roomId);
     }
     const userExists = room.users.some((user) => user.id === userId);
     if (!userExists) {
       room.users.push({ id: userId });
     }
-    console.log('rooms', this.rooms);
-    console.log('room', room);
     return room;
   }
 
@@ -90,5 +79,10 @@ export class RoomsService {
       }
       return currentRoom;
     });
+  }
+
+  addFileToRoom(roomId: string, file: FileData) {
+    const room = this.getRoomById(roomId);
+    room.files.push(file);
   }
 }
