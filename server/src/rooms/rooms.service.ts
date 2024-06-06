@@ -5,39 +5,30 @@ import { FileData, Room } from './room_model';
 export class RoomsService {
   private rooms: Room[] = [];
 
-  getRooms() {
+  getRooms(): Room[] {
     return this.rooms;
   }
-  /**
-   * id로 방을 찾아서 반환
-   * @param id 방의 id 값
-   * @returns Room 객체
-   */
-  getRoomById(id: string) {
-    const room = this.rooms.find((room) => room.id === id);
+
+  getRoomById(id: string): Room {
+    let room = this.rooms.find((room) => room.id === id);
     if (!room) {
-      const room: Room = {
+      room = {
         id: id,
         users: [],
         files: [],
       };
       this.rooms.push(room);
-      return room;
     }
     return room;
   }
 
-  /**
-   * 방 생성
-   * @returns 생성된 Room 객체
-   */
-  createRoom(id: string | undefined) {
+  createRoom(id?: string): Room {
     if (id) {
-      const room = this.rooms.find((room) => room.id === id);
+      let room = this.rooms.find((room) => room.id === id);
       if (room) {
         return room;
       } else {
-        const room: Room = {
+        room = {
           id: id,
           users: [],
           files: [],
@@ -61,7 +52,7 @@ export class RoomsService {
     return room;
   }
 
-  addUserToRoom(roomId: string, userId: string) {
+  addUserToRoom(roomId: string, userId: string): Room {
     let room = this.rooms.find((room) => room.id === roomId);
 
     if (!room) {
@@ -80,22 +71,21 @@ export class RoomsService {
     return room;
   }
 
-  removeUserFromRoom(userId: string) {
-    this.rooms = this.rooms.map((currentRoom) => {
-      currentRoom.files = currentRoom.files.filter(
-        (file) => file.user.id !== userId,
-      );
-      currentRoom.users = currentRoom.users.filter(
-        (user) => user.id !== userId,
-      );
-      if (currentRoom.users.length === 0) {
-        this.rooms = this.rooms.filter((room) => room.id !== currentRoom.id);
-      }
-      return currentRoom;
-    });
+  removeUserFromRoom(userId: string): void {
+    this.rooms = this.rooms
+      .map((currentRoom) => {
+        currentRoom.files = currentRoom.files.filter(
+          (file) => file.user.id !== userId,
+        );
+        currentRoom.users = currentRoom.users.filter(
+          (user) => user.id !== userId,
+        );
+        return currentRoom;
+      })
+      .filter((room) => room.users.length > 0);
   }
 
-  uploadFile(id: string, files: FileData[]) {
+  uploadFile(id: string, files: FileData[]): Room {
     console.log(id);
     console.log('rooms', this.rooms);
     const room = this.rooms.find((room) => room.id === id);
@@ -104,7 +94,7 @@ export class RoomsService {
       console.log('room', room);
       return room;
     }
-    const newRoom = {
+    const newRoom: Room = {
       id: id,
       users: [files[0].user],
       files: files,

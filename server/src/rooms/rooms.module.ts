@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { RoomsService } from './rooms.service';
 import { RoomsController } from './rooms.controller';
-import { WebsocketGateway } from 'src/websocket/websocket/websocket.gateway';
+import { WebsocketGateway } from '../websocket/websocket/websocket.gateway';
 
 @Module({
   providers: [RoomsService, WebsocketGateway],
   controllers: [RoomsController],
-  exports: [RoomsService],
+  exports: [RoomsService, WebsocketGateway],
 })
 export class RoomsModule {}

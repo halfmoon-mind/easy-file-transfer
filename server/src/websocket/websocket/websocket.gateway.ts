@@ -6,7 +6,7 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { RoomsService } from 'src/rooms/rooms.service';
+import { RoomsService } from '../../rooms/rooms.service';
 
 @WebSocketGateway(8081, { cors: true })
 export class WebsocketGateway
@@ -17,8 +17,7 @@ export class WebsocketGateway
 
   constructor(private readonly roomsService: RoomsService) {}
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  handleConnection(client: Socket, ..._args: any[]) {
+  handleConnection(client: Socket) {
     console.log(`Client connected: ${client.id}`);
   }
 
@@ -30,9 +29,7 @@ export class WebsocketGateway
   @SubscribeMessage('joinRoom')
   handleJoinRoom(client: Socket, roomId: string): void {
     client.join(roomId);
-
     this.roomsService.addUserToRoom(roomId, client.id);
-
     const roomData = this.roomsService.getRoomById(roomId);
     console.log(`ROOM :roomData`, roomData);
     this.server.to(roomId).emit('roomStatus', roomData);
@@ -67,7 +64,7 @@ export class WebsocketGateway
     const rooms = this.roomsService.getRooms();
 
     rooms.forEach((room) => {
-      if (room.users.includes({ id: client.id })) {
+      if (room.users.find((user) => user.id === client.id)) {
         this.server
           .to(room.id)
           .emit('roomStatus', this.roomsService.getRoomById(room.id));

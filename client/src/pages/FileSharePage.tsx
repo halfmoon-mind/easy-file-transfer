@@ -93,7 +93,6 @@ const FileSharePage = () => {
 
         try {
             await apiService.post(`/rooms/${id}/upload`, body);
-            refreshRoomStatus();
         } catch (error) {
             console.error(error);
         }
