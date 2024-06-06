@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Room } from './room_model';
+import { FileData, Room } from './room_model';
 
 @Injectable()
 export class RoomsService {
@@ -72,6 +72,9 @@ export class RoomsService {
     if (!userExists) {
       room.users.push({ id: userId });
     }
+    this.rooms = this.rooms.map((currentRoom) =>
+      currentRoom.id === roomId ? room : currentRoom,
+    );
     console.log('rooms', this.rooms);
     console.log('room', room);
     return room;
@@ -90,5 +93,25 @@ export class RoomsService {
       }
       return currentRoom;
     });
+  }
+
+  uploadFile(id: string, files: FileData[]) {
+    console.log(id);
+    console.log('rooms', this.rooms);
+    const room = this.rooms.find((room) => room.id === id);
+    if (room) {
+      room.files = [...room.files, ...files];
+      console.log('room', room);
+      return room;
+    }
+    const newRoom = {
+      id: id,
+      users: [files[0].user],
+      files: files,
+    };
+
+    this.rooms.push(newRoom);
+
+    return newRoom;
   }
 }

@@ -1,9 +1,10 @@
-import { Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { RoomsService } from './rooms.service';
+import { FileData } from './room_model';
 
 @Controller('rooms')
 export class RoomsController {
-  constructor(private roomServices: RoomsService) {}
+  constructor(private readonly roomServices: RoomsService) {}
 
   @Post('create')
   createRooms() {
@@ -18,5 +19,10 @@ export class RoomsController {
   @Get()
   getRooms() {
     return this.roomServices.getRooms();
+  }
+
+  @Post(':id/upload')
+  uploadFile(@Param('id') id: string, @Body('files') files: FileData[]) {
+    return this.roomServices.uploadFile(id, files);
   }
 }

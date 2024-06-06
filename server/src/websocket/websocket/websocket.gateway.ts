@@ -55,7 +55,6 @@ export class WebsocketGateway
   @SubscribeMessage('userCount')
   handleUserCount(client: Socket, room: string): void {
     const roomClients = this.server.sockets.adapter.rooms.get(room);
-    console.log('roomClients', roomClients);
     if (roomClients) {
       client.emit('userCount', roomClients.size);
     }

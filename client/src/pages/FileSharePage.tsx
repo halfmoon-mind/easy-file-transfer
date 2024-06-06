@@ -7,44 +7,37 @@ import CopyLink from "../components/FileShare/CopyLink";
 import DownloadButton from "../components/DownloadButton";
 import socketService from "../services/socketService";
 import apiService from "../services/apiService";
-import { FileData, Room } from "@/types/Room";
+import { FileData, Room } from "../types/Room";
+import { v4 } from "uuid";
 
-// const FileUploadComponent = ({
-//     fileList,
-//     setFileList,
-//     onUploadFile,
-// }: {
-//     fileList: File[];
-//     setFileList: (fileList: File[]) => void;
-//     onUploadFile: (fileList: File[]) => void;
-// }) => {
-//     return (
-//         <div>
-//             <FileUploader
-//                 name="file"
-//                 multiple={true}
-//                 label="UPLOAD HERE"
-//                 onDrop={(files: File[]) => {
-//                     setFileList([...fileList, ...files]);
-//                     onUploadFile(files);
-//                 }}
-//                 onSelect={(files: File[]) => {
-//                     setFileList([...fileList, ...files]);
-//                     onUploadFile(files);
-//                 }}
-//             />
-//         </div>
-//     );
-// };
+const FileUploadComponent = ({ onUploadFile }: { onUploadFile: (fileList: File[]) => void }) => {
+    return (
+        <div>
+            <FileUploader
+                name="file"
+                multiple={true}
+                label="UPLOAD HERE"
+                onDrop={(e: FileList) => {
+                    const files = Array.from(e);
+                    onUploadFile(files);
+                }}
+                onSelect={(e: FileList) => {
+                    const files = Array.from(e);
+                    onUploadFile(files);
+                }}
+            />
+        </div>
+    );
+};
 
 const FileSharePage = () => {
     const { id } = useParams();
     const [fileList, setFileList] = useState<FileData[]>([]);
     const [userCount, setUserCount] = useState(0);
+    const [internalFileList, setInternalFileList] = useState<File[]>([]);
 
     const handleRefreshRoomStatus = async (data: Room) => {
         const room = data;
-        console.log(room);
         setFileList(room.files);
         setUserCount(room.users.length);
     };
@@ -77,6 +70,7 @@ const FileSharePage = () => {
 
         socketService.on("roomStatus", (data) => {
             handleRefreshRoomStatus(data);
+            console.log("DATA", data);
         });
 
         return () => {
@@ -84,10 +78,26 @@ const FileSharePage = () => {
         };
     }, [id]);
 
-    // const handleUploadFile = async (files: File[]) => {
-    //     const result = await apiService.post(`/rooms/${id}/upload`, { files: files });
-    //     console.log(result);
-    // };
+    const handleUploadFile = async (files: File[]) => {
+        setInternalFileList(files);
+
+        const body = {
+            files: files.map((file) => {
+                return {
+                    fileId: v4(),
+                    fileName: file.name,
+                    user: { id: socketService.socket!.id },
+                };
+            }),
+        };
+
+        try {
+            await apiService.post(`/rooms/${id}/upload`, body);
+            refreshRoomStatus();
+        } catch (error) {
+            console.error(error);
+        }
+    };
 
     return (
         <div>
@@ -102,13 +112,11 @@ const FileSharePage = () => {
             <h1>ID : {id}</h1>
             <Description />
             <ConnectedUser count={userCount} />
-            {/* <FileUploadComponent
-                fileList={fileList}
-                setFileList={setFileList}
+            <FileUploadComponent
                 onUploadFile={(files: File[]) => {
                     handleUploadFile(files);
                 }}
-            /> */}
+            />
             <div
                 onClick={refreshRoomStatus}
                 style={{
@@ -123,7 +131,7 @@ const FileSharePage = () => {
             >
                 파일 리프레시
             </div>
-            {/* <FileDownLoadComponent fileList={fileList} /> */}
+            <FileDownLoadComponent fileList={fileList} />
 
             <h1>QR 코드로 공유하기</h1>
             <canvas id="roomCode" style={{ borderRadius: 20 }}></canvas>
@@ -136,7 +144,7 @@ const ConnectedUser = ({ count }: { count: number }) => {
     return <h1>Connected User : {count}</h1>;
 };
 
-const FileDownLoadComponent = ({ fileList }: { fileList: File[] }) => {
+const FileDownLoadComponent = ({ fileList }: { fileList: FileData[] }) => {
     const handleDownLoad = () => {
         console.log("Download");
     };
@@ -144,14 +152,7 @@ const FileDownLoadComponent = ({ fileList }: { fileList: File[] }) => {
     return (
         <div>
             {fileList.map((file, index) => {
-                return (
-                    <div key={index}>
-                        <a href={URL.createObjectURL(file)} download={file.name}>
-                            <img width={20} height={20} src={URL.createObjectURL(file)} alt={file.name} />
-                            {file.name}
-                        </a>
-                    </div>
-                );
+                return <div key={index}>{file.fileName}</div>;
             })}
             <DownloadButton onClick={handleDownLoad} />
         </div>

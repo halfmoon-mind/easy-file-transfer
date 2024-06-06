@@ -5,10 +5,9 @@ export interface Room {
 }
 
 export interface FileData {
-    id: string;
-    name: string;
-    size: number;
     user: User;
+    fileId: string;
+    fileName: string;
 }
 
 export interface User {
