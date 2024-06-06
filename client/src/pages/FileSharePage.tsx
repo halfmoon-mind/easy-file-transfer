@@ -6,7 +6,7 @@ import CopyLink from "../components/FileShare/CopyLink";
 import DownloadButton from "../components/DownloadButton";
 import socketService from "../services/socketService";
 import apiService from "../services/apiService";
-import { FileData, Room } from "../types/Room";
+import { FileData, InternalFileData, Room } from "../types/Room";
 import { v4 as uuidv4 } from "uuid";
 import FileTransferService from "../services/FileTransferService";
 
@@ -34,8 +34,12 @@ const FileSharePage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const [fileList, setFileList] = useState<FileData[]>([]);
     const [userCount, setUserCount] = useState(0);
-    const [internalFileList, setInternalFileList] = useState<File[]>([]);
+    const [internalFileList, setInternalFileList] = useState<InternalFileData[]>([]);
     const [selectedFile, setSelectedFile] = useState<string | null>(null);
+
+    useEffect(() => {
+        FileTransferService.setInternalFileList(internalFileList);
+    }, [internalFileList]);
 
     const handleRefreshRoomStatus = async (data: Room) => {
         const room = data;
@@ -60,27 +64,51 @@ const FileSharePage: React.FC = () => {
             handleRefreshRoomStatus(data);
         });
 
+        socketService.on("fileRequestResponse", (fileId: string) => {
+            const file = internalFileList.find((file) => file.fileId === fileId);
+            if (file) {
+                console.log("Sending file:", file.file.name);
+                FileTransferService.sendFile(file.file);
+            } else {
+                console.error("File not found in internal list:", fileId);
+            }
+        });
+
         return () => {
             socketService.disconnect(id);
         };
-    }, [id]);
+    }, [id, internalFileList]);
 
     const handleUploadFile = async (files: File[]) => {
-        setInternalFileList(files);
-
-        const body = {
-            files: files.map((file) => ({
-                fileId: uuidv4(),
+        const fileData = files.map((file) => {
+            const fileId = uuidv4();
+            return {
+                fileId,
                 fileName: file.name,
                 user: { id: socketService.socket!.id },
+            };
+        });
+
+        const internalFileData = files.map((file, index) => ({
+            fileId: fileData[index].fileId,
+            file,
+        }));
+
+        setInternalFileList(internalFileData);
+
+        const body = {
+            files: fileData.map(({ fileId, fileName, user }) => ({
+                fileId,
+                fileName,
+                user,
             })),
         };
 
         try {
             await apiService.post(`/rooms/${id}/upload`, body);
             // Notify other clients about the uploaded files
-            files.forEach((file) => {
-                socketService.emit("uploadFile", { fileName: file.name, file });
+            fileData.forEach(({ fileId, fileName }) => {
+                socketService.emit("uploadFile", { fileId, fileName });
             });
         } catch (error) {
             console.error(error);
@@ -89,12 +117,14 @@ const FileSharePage: React.FC = () => {
 
     const handleDownload = () => {
         if (selectedFile) {
-            const file = internalFileList.find((file) => file.name === selectedFile);
+            console.log("Selected file ID:", selectedFile);
+            const file = internalFileList.find((file) => file.fileId === selectedFile);
             if (file) {
-                const fileTransferService = new FileTransferService();
-                fileTransferService.sendFile(file);
+                console.log("Sending file:", file.file.name);
+                FileTransferService.sendFile(file.file);
             } else {
-                alert("File not found.");
+                console.log("Requesting file:", selectedFile);
+                socketService.emit("requestFile", { fileId: selectedFile, requesterId: socketService.socket!.id });
             }
         } else {
             alert("No file selected for download.");

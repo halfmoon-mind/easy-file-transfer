@@ -10,6 +10,11 @@ export interface FileData {
     fileName: string;
 }
 
+export interface InternalFileData {
+    fileId: string;
+    file: File;
+}
+
 export interface User {
     id: string;
 }

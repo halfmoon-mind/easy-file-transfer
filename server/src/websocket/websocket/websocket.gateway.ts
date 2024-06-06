@@ -72,4 +72,22 @@ export class WebsocketGateway
       client.leave(room.id);
     });
   }
+
+  @SubscribeMessage('message')
+  handleMessageEvent(client: Socket, data: any) {
+    console.log(`Client ${client.id} sent message: ${data}`);
+    this.server.to(data.room).emit('message', data);
+  }
+
+  @SubscribeMessage('uploadFile')
+  handleUploadFile(client: Socket, data: { fileId: string; fileName: string }) {
+    console.log(`Client ${client.id} uploaded file: ${data.fileName}`);
+    this.server.to(client.id).emit('fileRequestResponse', data.fileId);
+  }
+
+  @SubscribeMessage('requestFile')
+  handleRequestFile(client: Socket, data: { fileId: string }) {
+    console.log(`Client ${client.id} requested file: ${data.fileId}`);
+    this.server.to(data.fileId).emit('fileRequest', client.id);
+  }
 }

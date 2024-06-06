@@ -1,16 +1,19 @@
+import { v4 as uuidv4 } from "uuid";
 import socketService from "./socketService";
+import { InternalFileData } from "src/types/Room";
 
 const CHUNK_SIZE = 16384;
 
 class FileTransferService {
+    private static instance: FileTransferService;
     private peerConnection: RTCPeerConnection;
     private dataChannel?: RTCDataChannel;
     private iceCandidateQueue: RTCIceCandidate[] = [];
     private receivedFileBuffers: { [key: string]: ArrayBuffer[] } = {};
     private currentFileMetadata: any = {};
-    uploadedFiles: { [key: string]: File } = {};
+    private internalFileList: { [key: string]: File } = {};
 
-    constructor() {
+    private constructor() {
         this.peerConnection = new RTCPeerConnection({
             iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
         });
@@ -19,9 +22,24 @@ class FileTransferService {
         this.setupPeerConnection();
     }
 
+    public static getInstance(): FileTransferService {
+        if (!FileTransferService.instance) {
+            FileTransferService.instance = new FileTransferService();
+        }
+        return FileTransferService.instance;
+    }
+
+    public setInternalFileList(files: InternalFileData[]) {
+        this.internalFileList = files.reduce((acc, file) => {
+            acc[file.fileId] = file.file;
+            return acc;
+        }, {} as { [key: string]: File });
+    }
+
     private setupSignalingServer() {
         socketService.on("message", async (data: any) => {
             if (data.candidate) {
+                console.log("Received ICE candidate:", data.candidate);
                 if (this.peerConnection.remoteDescription && this.peerConnection.remoteDescription.type) {
                     try {
                         await this.peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
@@ -32,6 +50,7 @@ class FileTransferService {
                     this.iceCandidateQueue.push(data.candidate);
                 }
             } else if (data.sdp) {
+                console.log("Received SDP:", data.sdp);
                 try {
                     await this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
                     while (this.iceCandidateQueue.length) {
@@ -53,18 +72,17 @@ class FileTransferService {
             }
         });
 
-        socketService.on("uploadFile", (data: any) => {
-            this.uploadedFiles[data.fileName] = data.file;
-        });
-
         socketService.on("requestFile", async (data: any) => {
-            const { fileName, requesterId } = data;
-            const file = this.uploadedFiles[fileName];
+            console.log("File requested:", data);
+            const { fileId, requesterId } = data;
+            const file = this.internalFileList[fileId];
             if (file) {
+                console.log("File found:", fileId);
                 this.dataChannel = this.peerConnection.createDataChannel("fileTransfer");
                 this.setupDataChannel(this.dataChannel);
 
                 this.dataChannel.onopen = () => {
+                    console.log("Data channel open, sending file...");
                     this.sendFileInChunks(file);
                 };
 
@@ -72,23 +90,23 @@ class FileTransferService {
                 await this.peerConnection.setLocalDescription(offer);
                 socketService.emit("message", { sdp: this.peerConnection.localDescription, target: requesterId });
             } else {
-                console.error("File not found:", fileName);
+                console.error("File not found:", fileId);
             }
         });
     }
 
     private setupPeerConnection() {
-        this.peerConnection.onicecandidate = (event: any) => {
+        this.peerConnection.onicecandidate = (event) => {
             if (event.candidate) {
+                console.log("Sending ICE candidate:", event.candidate);
                 socketService.emit("message", { candidate: event.candidate });
             }
         };
 
-        this.peerConnection.ondatachannel = (event: any) => {
+        this.peerConnection.ondatachannel = (event) => {
             this.dataChannel = event.channel;
-            if (this.dataChannel) {
-                this.setupDataChannel(this.dataChannel);
-            }
+            console.log("Data channel received:", this.dataChannel);
+            this.setupDataChannel(this.dataChannel);
         };
     }
 
@@ -101,11 +119,12 @@ class FileTransferService {
             console.log("Data channel is closed");
         };
 
-        channel.onmessage = (event: any) => {
+        channel.onmessage = (event) => {
             const receivedData = event.data;
 
             if (typeof receivedData === "string") {
                 const metadata = JSON.parse(receivedData);
+                console.log("Received file metadata:", metadata);
                 this.currentFileMetadata = metadata;
                 this.receivedFileBuffers[metadata.fileName] = [];
             } else {
@@ -119,7 +138,7 @@ class FileTransferService {
             }
         };
 
-        channel.onerror = (error: any) => {
+        channel.onerror = (error) => {
             console.error("Data channel error:", error);
         };
     }
@@ -142,6 +161,7 @@ class FileTransferService {
         socketService.emit("message", { sdp: this.peerConnection.localDescription });
 
         this.dataChannel.onopen = () => {
+            console.log("Data channel open, sending file...");
             this.sendFileInChunks(file);
         };
     }
@@ -155,6 +175,7 @@ class FileTransferService {
             fileSize: file.size,
         };
 
+        console.log("Sending file metadata:", metadata);
         this.dataChannel!.send(JSON.stringify(metadata));
 
         reader.onload = () => {
@@ -190,4 +211,4 @@ class FileTransferService {
     }
 }
 
-export default FileTransferService;
+export default FileTransferService.getInstance();
