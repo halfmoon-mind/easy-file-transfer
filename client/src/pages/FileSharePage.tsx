@@ -35,6 +35,7 @@ const FileSharePage = () => {
     const [fileList, setFileList] = useState<FileData[]>([]);
     const [userCount, setUserCount] = useState(0);
     const [internalFileList, setInternalFileList] = useState<File[]>([]);
+    const [selectedFile, setSelectedFile] = useState<string | null>(null);
 
     const handleRefreshRoomStatus = async (data: Room) => {
         const room = data;
@@ -130,7 +131,7 @@ const FileSharePage = () => {
             >
                 파일 리프레시
             </div>
-            <FileDownLoadComponent fileList={fileList} />
+            <FileDownLoadComponent fileList={fileList} selectedFile={selectedFile} setSelectedFile={setSelectedFile} />
 
             <h1>QR 코드로 공유하기</h1>
             <canvas id="roomCode" style={{ borderRadius: 20 }}></canvas>
@@ -143,16 +144,34 @@ const ConnectedUser = ({ count }: { count: number }) => {
     return <h1>Connected User : {count}</h1>;
 };
 
-const FileDownLoadComponent = ({ fileList }: { fileList: FileData[] }) => {
+const FileDownLoadComponent = ({
+    fileList,
+    selectedFile,
+    setSelectedFile,
+}: {
+    fileList: FileData[];
+    selectedFile: string | null;
+    setSelectedFile: (fileId: string) => void;
+}) => {
     const handleDownLoad = () => {
-        console.log("Download");
+        console.log("Selected file:", selectedFile);
     };
 
     return (
         <div>
-            {fileList.map((file, index) => {
-                return <div key={index}>{file.fileName}</div>;
-            })}
+            {fileList.map((file, index) => (
+                <div key={index}>
+                    <input
+                        type="radio"
+                        id={`file-${index}`}
+                        name="file"
+                        value={file.fileId}
+                        checked={selectedFile === file.fileId}
+                        onChange={() => setSelectedFile(file.fileId)}
+                    />
+                    <label htmlFor={`file-${index}`}>{file.fileName}</label>
+                </div>
+            ))}
             <DownloadButton onClick={handleDownLoad} />
         </div>
     );
