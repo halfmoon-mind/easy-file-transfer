@@ -22,6 +22,12 @@ export class RoomsService {
     return room;
   }
 
+  getRoomByUserId(userId: string): Room {
+    return this.rooms.find((room) =>
+      room.users.some((user) => user.id === userId),
+    );
+  }
+
   createRoom(id?: string): Room {
     if (id) {
       let room = this.rooms.find((room) => room.id === id);

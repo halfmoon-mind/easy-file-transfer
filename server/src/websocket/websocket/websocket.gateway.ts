@@ -86,8 +86,14 @@ export class WebsocketGateway
   }
 
   @SubscribeMessage('requestFile')
-  handleRequestFile(client: Socket, data: { fileId: string }) {
+  handleRequestFile(
+    client: Socket,
+    data: { fileId: string; requesterId: string },
+  ) {
     console.log(`Client ${client.id} requested file: ${data.fileId}`);
-    this.server.to(data.fileId).emit('fileRequest', client.id);
+    const room = this.roomsService.getRoomByUserId(data.requesterId);
+    this.server
+      .to(room.id)
+      .emit('fileRequestResponse', data.fileId, data.requesterId);
   }
 }
