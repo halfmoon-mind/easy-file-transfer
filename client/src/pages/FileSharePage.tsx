@@ -107,9 +107,7 @@ const FileSharePage: React.FC = () => {
         try {
             await apiService.post(`/rooms/${id}/upload`, body);
             // Notify other clients about the uploaded files
-            fileData.forEach(({ fileId, fileName }) => {
-                socketService.emit("uploadFile", { fileId, fileName });
-            });
+            refreshRoomStatus();
         } catch (error) {
             console.error(error);
         }

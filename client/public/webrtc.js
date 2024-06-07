@@ -27,7 +27,7 @@ const peerConnection = new RTCPeerConnection({
 
 let dataChannel;
 const CHUNK_SIZE = 16384;
-let receivedFiles = [];
+
 let receivedFileBuffers = {};
 let currentFileMetadata = {};
 let uploadedFiles = {};
@@ -140,29 +140,6 @@ const saveFile = (blob, fileName) => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-};
-
-const updateReceivedFilesList = () => {
-    const receivedFilesContainer = document.getElementById("receivedFiles");
-    receivedFilesContainer.innerHTML = "";
-
-    receivedFiles.forEach((file, index) => {
-        const radioInput = document.createElement("input");
-        radioInput.type = "radio";
-        radioInput.name = "receivedFile";
-        radioInput.value = file.name;
-        radioInput.id = `file${index}`;
-
-        const label = document.createElement("label");
-        label.htmlFor = `file${index}`;
-        label.textContent = file.name;
-
-        const br = document.createElement("br");
-
-        receivedFilesContainer.appendChild(radioInput);
-        receivedFilesContainer.appendChild(label);
-        receivedFilesContainer.appendChild(br);
-    });
 };
 
 const storeFileInDB = (fileName, fileData) => {
