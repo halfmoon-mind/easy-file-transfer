@@ -40,9 +40,11 @@ const FileSharePage: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const peerConnection = useRef<RTCPeerConnection | null>(null);
   const dataChannel = useRef<RTCDataChannel | null>(null);
-  const fileBuffer = useRef<{ [fileName: string]: Blob[] }>({});
+  const fileBuffer = useRef<{ [fileName: string]: ArrayBuffer[] }>({});
   const currentFileMetadata = useRef<any>(null);
   const progressBar = useRef<HTMLProgressElement | null>(null);
+
+  const iceCandidateQueue: RTCIceCandidate[] = [];
 
   useEffect(() => {
     FileTransferService.setInternalFileList(internalFileList);
@@ -174,13 +176,13 @@ const FileSharePage: React.FC = () => {
         }
       } else if (receivedData instanceof ArrayBuffer) {
         const fileBufferList = fileBuffer.current[currentFileMetadata.current.fileName];
-        fileBufferList.push(new Blob([receivedData]));
+        fileBufferList.push(receivedData);
         if (progressBar.current) {
           progressBar.current.value += receivedData.byteLength;
         }
         console.log(`Received chunk: ${fileBufferList.length}, size: ${receivedData.byteLength}`);
 
-        const totalSize = fileBufferList.reduce((acc, chunk) => acc + chunk.size, 0);
+        const totalSize = fileBufferList.reduce((acc, chunk) => acc + chunk.byteLength, 0);
         if (totalSize === currentFileMetadata.current.fileSize) {
           const blob = new Blob(fileBufferList);
           saveFile(blob, currentFileMetadata.current.fileName);
@@ -188,6 +190,7 @@ const FileSharePage: React.FC = () => {
           if (progressBar.current) {
             progressBar.current.style.display = 'none';
           }
+          dataChannel.current?.close();
         }
       }
     };
@@ -248,6 +251,7 @@ const FileSharePage: React.FC = () => {
               readSlice(offset);
             } else {
               console.log('All chunks sent');
+              dataChannel.current?.close();
             }
           } catch (e) {
             if ((e as Error).name === 'OperationError') {
