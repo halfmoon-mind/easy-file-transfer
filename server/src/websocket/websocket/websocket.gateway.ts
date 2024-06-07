@@ -96,4 +96,33 @@ export class WebsocketGateway
       .to(room.id)
       .emit('fileRequestResponse', data.fileId, data.requesterId);
   }
+
+  @SubscribeMessage('sendOffer')
+  async handleSendOffer(
+    client: Socket,
+    data: { sdp: RTCSessionDescriptionInit; target: string },
+  ) {
+    console.log(`Client ${client.id} sent offer to ${data.target}`);
+    this.server
+      .to(data.target)
+      .emit('receiveOffer', { sdp: data.sdp, requesterId: client.id });
+  }
+
+  @SubscribeMessage('sendAnswer')
+  async handleSendAnswer(
+    client: Socket,
+    data: { sdp: RTCSessionDescriptionInit; target: string },
+  ) {
+    console.log(`Client ${client.id} sent answer to ${data.target}`);
+    this.server.to(data.target).emit('receiveAnswer', data.sdp);
+  }
+
+  @SubscribeMessage('iceCandidate')
+  async handleIceCandidate(
+    client: Socket,
+    data: { candidate: RTCIceCandidateInit; target: string },
+  ) {
+    console.log(`Client ${client.id} sent ICE candidate to ${data.target}`);
+    this.server.to(data.target).emit('iceCandidate', data.candidate);
+  }
 }

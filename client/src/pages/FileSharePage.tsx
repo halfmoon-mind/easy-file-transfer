@@ -83,6 +83,30 @@ const FileSharePage: React.FC = () => {
             }
         });
 
+        socketService.on("receiveOffer", async ({ sdp, requesterId }) => {
+            if (peerConnection.current) {
+                await peerConnection.current.setRemoteDescription(new RTCSessionDescription(sdp));
+                const answer = await peerConnection.current.createAnswer();
+                await peerConnection.current.setLocalDescription(answer);
+                socketService.emit("sendAnswer", {
+                    sdp: peerConnection.current.localDescription,
+                    target: requesterId,
+                });
+            }
+        });
+
+        socketService.on("receiveAnswer", async (sdp) => {
+            if (peerConnection.current) {
+                await peerConnection.current.setRemoteDescription(new RTCSessionDescription(sdp));
+            }
+        });
+
+        socketService.on("iceCandidate", async (candidate) => {
+            if (peerConnection.current) {
+                await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
+            }
+        });
+
         return () => {
             socketService.disconnect(id);
         };
@@ -97,7 +121,7 @@ const FileSharePage: React.FC = () => {
 
         peerConnection.current.onicecandidate = (event) => {
             if (event.candidate) {
-                socketService.emit("message", { candidate: event.candidate });
+                socketService.emit("iceCandidate", { candidate: event.candidate, target: peerConnection.current!.remoteDescription!.sdp });
                 console.log("ICE candidate sent:", event.candidate);
             } else {
                 console.log("All ICE candidates have been sent");
@@ -213,7 +237,7 @@ const FileSharePage: React.FC = () => {
 
         const offer = await peerConnection.current!.createOffer();
         await peerConnection.current!.setLocalDescription(offer);
-        socketService.emit("message", { sdp: peerConnection.current!.localDescription });
+        socketService.emit("sendOffer", { sdp: peerConnection.current!.localDescription, target: id });
         console.log("Offer sent to peer:", peerConnection.current!.localDescription);
     };
 
