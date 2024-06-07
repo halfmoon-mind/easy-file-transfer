@@ -172,15 +172,16 @@ const FileSharePage: React.FC = () => {
           progressBar.current.max = metadata.fileSize;
           progressBar.current.style.display = 'block';
         }
-      } else {
+      } else if (receivedData instanceof ArrayBuffer) {
         const fileBufferList = fileBuffer.current[currentFileMetadata.current.fileName];
-        fileBufferList.push(receivedData);
+        fileBufferList.push(new Blob([receivedData]));
         if (progressBar.current) {
-          progressBar.current.value += receivedData.size;
+          progressBar.current.value += receivedData.byteLength;
         }
-        console.log(`Received chunk: ${fileBufferList.length}, size: ${receivedData.size}`);
+        console.log(`Received chunk: ${fileBufferList.length}, size: ${receivedData.byteLength}`);
 
-        if (fileBufferList.reduce((acc, chunk) => acc + chunk.size, 0) === currentFileMetadata.current.fileSize) {
+        const totalSize = fileBufferList.reduce((acc, chunk) => acc + chunk.size, 0);
+        if (totalSize === currentFileMetadata.current.fileSize) {
           const blob = new Blob(fileBufferList);
           saveFile(blob, currentFileMetadata.current.fileName);
           console.log('File received completely:', currentFileMetadata.current.fileName);
