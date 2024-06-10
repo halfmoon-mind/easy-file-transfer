@@ -9,6 +9,7 @@ class SocketService {
             path: "/socket.io",
             transports: ["websocket"],
             withCredentials: true,
+            secure: true,
         });
 
         console.log("Connecting to socket server");
