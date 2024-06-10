@@ -5,7 +5,11 @@ class SocketService {
     socket: Socket | null = null;
 
     connect(roomId: string) {
-        this.socket = io(SOCKET_BASE_URL);
+        this.socket = io(SOCKET_BASE_URL, {
+            path: "/socket.io",
+            transports: ["websocket"],
+            withCredentials: true,
+        });
 
         console.log("Connecting to socket server");
 
