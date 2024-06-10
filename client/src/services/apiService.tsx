@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const BASE_URL = "https://socket.easyfile.site";
-const SOCKET_BASE_URL = "wss://socket.easyfile.site/socket";
+const SOCKET_BASE_URL = "wss://socket.easyfile.site";
 
 const apiService = axios.create({
     baseURL: BASE_URL,
