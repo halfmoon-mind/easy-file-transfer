@@ -8,8 +8,6 @@ class SocketService {
         this.socket = io(SOCKET_BASE_URL, {
             path: "/socket.io",
             transports: ["websocket"],
-            withCredentials: true,
-            secure: true,
         });
 
         console.log("Connecting to socket server");
