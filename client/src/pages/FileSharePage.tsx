@@ -125,6 +125,7 @@ const FileSharePage: React.FC = () => {
             if (peerConnection.current) {
                 try {
                     await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
+                    console.log("ICE candidate added:", candidate);
                 } catch (error) {
                     console.error("Error adding received ICE candidate: ", error);
                 }
@@ -140,7 +141,26 @@ const FileSharePage: React.FC = () => {
         if (peerConnection.current) return;
 
         peerConnection.current = new RTCPeerConnection({
-            iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+            iceServers: [
+                { urls: "stun:stun.l.google.com:19302" },
+                { urls: "stun:stun1.l.google.com:19302" },
+                { urls: "stun:stun2.l.google.com:19302" },
+                { urls: "stun:stun3.l.google.com:19302" },
+                { urls: "stun:stun4.l.google.com:19302" },
+                { urls: "stun:stun01.sipphone.com" },
+                { urls: "stun:stun.ekiga.net" },
+                { urls: "stun:stun.fwdnet.net" },
+                { urls: "stun:stun.ideasip.com" },
+                { urls: "stun:stun.iptel.org" },
+                { urls: "stun:stun.rixtelecom.se" },
+                { urls: "stun:stun.schlund.de" },
+                { urls: "stun:stunserver.org" },
+                { urls: "stun:stun.softjoys.com" },
+                { urls: "stun:stun.voiparound.com" },
+                { urls: "stun:stun.voipbuster.com" },
+                { urls: "stun:stun.voipstunt.com" },
+                { urls: "stun:stun.voxgratia.org" },
+            ],
         });
 
         peerConnection.current.onicecandidate = (event) => {
@@ -225,6 +245,15 @@ const FileSharePage: React.FC = () => {
             await peerConnection.current.setLocalDescription(offer);
             socketService.emit("sendOffer", { sdp: peerConnection.current.localDescription, target: id });
             console.log("Offer sent to peer:", peerConnection.current.localDescription);
+
+            peerConnection.current.onicecandidate = (event) => {
+                if (event.candidate) {
+                    socketService.emit("iceCandidate", { candidate: event.candidate, target: id });
+                    console.log("ICE candidate sent:", event.candidate);
+                } else {
+                    console.log("All ICE candidates have been sent");
+                }
+            };
         } else {
             console.warn("Peer connection is not stable, cannot send file.");
         }
