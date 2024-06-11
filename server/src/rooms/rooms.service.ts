@@ -19,6 +19,7 @@ export class RoomsService {
       };
       this.rooms.push(room);
     }
+    room.files = room.files.filter((file) => file.user.id !== id);
     return room;
   }
 

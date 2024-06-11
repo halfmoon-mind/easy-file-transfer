@@ -8,7 +8,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { RoomsService } from '../../rooms/rooms.service';
 
-@WebSocketGateway({ cors: true, namespace: '/socket.io' })
+@WebSocketGateway({ cors: true })
 export class WebsocketGateway
   implements OnGatewayConnection, OnGatewayDisconnect
 {
