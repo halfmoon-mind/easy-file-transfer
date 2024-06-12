@@ -135,7 +135,7 @@ const FileSharePage: React.FC = () => {
     return () => {
       socketService.disconnect(id);
     };
-  }, [id]);
+  }, [id, internalFileList]);
 
   useEffect(() => {
     if (peerConnection.current) return;
