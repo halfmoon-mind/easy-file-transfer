@@ -1,20 +1,12 @@
 export interface Room {
-    id: string;
-    users: User[];
-    files: FileData[];
+  id: string;
+  users: string[];
+  files: FileData[];
 }
 
 export interface FileData {
-    user: User;
-    fileId: string;
-    fileName: string;
-}
-
-export interface InternalFileData {
-    fileId: string;
-    file: File;
-}
-
-export interface User {
-    id: string;
+  id: string;
+  name: string;
+  user: String;
+  file: File;
 }
