@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { FileData, Room } from './room_model';
+import { Room, FileData } from 'src/types/room_model';
 
 @Injectable()
 export class RoomsService {
@@ -19,13 +19,13 @@ export class RoomsService {
       };
       this.rooms.push(room);
     }
-    room.files = room.files.filter((file) => file.user.id !== id);
+    room.files = room.files.filter((file) => file.user !== id);
     return room;
   }
 
   getRoomByUserId(userId: string): Room {
     return this.rooms.find((room) =>
-      room.users.some((user) => user.id === userId),
+      room.users.some((user) => user === userId),
     );
   }
 
@@ -66,9 +66,9 @@ export class RoomsService {
       console.log('room not found');
       room = this.createRoom(roomId);
     }
-    const userExists = room.users.some((user) => user.id === userId);
+    const userExists = room.users.some((user) => user === userId);
     if (!userExists) {
-      room.users.push({ id: userId });
+      room.users.push(userId);
     }
     this.rooms = this.rooms.map((currentRoom) =>
       currentRoom.id === roomId ? room : currentRoom,
@@ -82,27 +82,22 @@ export class RoomsService {
     this.rooms = this.rooms
       .map((currentRoom) => {
         currentRoom.files = currentRoom.files.filter(
-          (file) => file.user.id !== userId,
+          (file) => file.user !== userId,
         );
-        currentRoom.users = currentRoom.users.filter(
-          (user) => user.id !== userId,
-        );
+        currentRoom.users = currentRoom.users.filter((user) => user !== userId);
         return currentRoom;
       })
       .filter((room) => room.users.length > 0);
   }
 
-  uploadFile(id: string, files: FileData[]): Room {
-    console.log(id);
-    console.log('rooms', this.rooms);
-    const room = this.rooms.find((room) => room.id === id);
+  uploadFile(roomId: string, files: FileData[]): Room {
+    const room = this.rooms.find((room) => room.id === roomId);
     if (room) {
       room.files = [...room.files, ...files];
-      console.log('room', room);
       return room;
     }
     const newRoom: Room = {
-      id: id,
+      id: roomId,
       users: [files[0].user],
       files: files,
     };

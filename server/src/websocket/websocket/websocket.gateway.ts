@@ -7,6 +7,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { RoomsService } from '../../rooms/rooms.service';
+import SocketFormat from 'src/types/socket_format_model';
 
 @WebSocketGateway({ cors: true })
 export class WebsocketGateway
@@ -64,7 +65,7 @@ export class WebsocketGateway
     const rooms = this.roomsService.getRooms();
 
     rooms.forEach((room) => {
-      if (room.users.find((user) => user.id === client.id)) {
+      if (room.users.find((user) => user === client.id)) {
         this.server
           .to(room.id)
           .emit('roomStatus', this.roomsService.getRoomById(room.id));
@@ -80,9 +81,12 @@ export class WebsocketGateway
   }
 
   @SubscribeMessage('uploadFile')
-  handleUploadFile(client: Socket, data: { fileId: string; fileName: string }) {
-    console.log(`Client ${client.id} uploaded file: ${data.fileName}`);
-    this.server.to(client.id).emit('fileRequestResponse', data.fileId);
+  handleUploadFile(client: Socket, socketData: SocketFormat) {
+    const { receiver, data } = socketData;
+    this.roomsService.uploadFile(receiver, data);
+    this.server
+      .to(receiver)
+      .emit('roomStatus', this.roomsService.getRoomById(receiver));
   }
 
   @SubscribeMessage('requestFile')

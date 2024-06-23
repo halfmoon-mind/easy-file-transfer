@@ -1,5 +1,8 @@
 export default interface SocketFormat {
-  sender: string;
-  receiver: string;
-  data: any;
+    /// 송신자 Socket ID
+    sender: string;
+    /// 수신자 Socket ID
+    receiver: string;
+    /// 메시지
+    data: any;
 }

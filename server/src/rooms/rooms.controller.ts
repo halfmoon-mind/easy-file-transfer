@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { RoomsService } from './rooms.service';
-import { FileData } from './room_model';
 import { WebsocketGateway } from '../websocket/websocket/websocket.gateway';
+import { FileData } from 'src/types/room_model';
 
 @Controller('rooms')
 export class RoomsController {

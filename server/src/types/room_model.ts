@@ -1,15 +1,12 @@
 export interface Room {
   id: string;
-  users: User[];
+  users: string[];
   files: FileData[];
 }
 
 export interface FileData {
-  user: User;
-  fileId: string;
-  fileName: string;
-}
-
-export interface User {
   id: string;
+  name: string;
+  user: string;
+  file: File;
 }
