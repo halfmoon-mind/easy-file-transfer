@@ -25,15 +25,6 @@ const SharePage = () => {
     });
 
     const dataChannel = peerConnection.createDataChannel("fileTransfer");
-    dataChannel.onerror = (error) => {
-        console.error("Data Channel Error:", error);
-    };
-    dataChannel.onclose = () => {
-        console.log("Data Channel closed");
-    };
-    dataChannel.onopen = () => {
-        console.log("Data Channel opened");
-    };
 
     useEffect(() => {
         validateRoomId(id);
@@ -57,8 +48,6 @@ const SharePage = () => {
             <div>
                 Files :{" "}
                 {room?.files.map((file) => (
-                    // onDownloadFile
-                    // <div key={file.id}>{file.name}</div>
                     <div key={file.id} onClick={() => onDownloadFile(file)}>
                         {file.name}
                     </div>
@@ -99,16 +88,42 @@ const SharePage = () => {
 
     function onDownloadFile(file: FileData) {
         const targetFile = room?.files.find((f) => f.id === file.id);
+        console.log("FILE : ", targetFile);
+        // targetFile?.file's type
+        console.log("FILE TYPE : ", typeof targetFile?.file);
         if (!targetFile) {
             return;
         }
+        if (targetFile.user === socketService.socket?.id!) {
+            const url = URL.createObjectURL(targetFile.file);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = file.name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            return;
+        }
         sendOffer(targetFile.user);
-        gatherICECandidates();
         peerConnection.ondatachannel = (event) => {
             const receiveChannel = event.channel;
+            const receivedBuffers: ArrayBuffer[] = [];
             receiveChannel.onmessage = (event) => {
                 const data = event.data;
-                console.log("Data received: ", data);
+                if (data === "EOF") {
+                    const receivedBlob = new Blob(receivedBuffers);
+                    const downloadUrl = URL.createObjectURL(receivedBlob);
+                    const a = document.createElement("a");
+                    a.href = downloadUrl;
+                    a.download = targetFile.name;
+                    document.body.appendChild(a);
+                    a.click();
+                    URL.revokeObjectURL(downloadUrl);
+                    document.body.removeChild(a);
+                } else {
+                    receivedBuffers.push(data);
+                }
             };
         };
     }
@@ -120,6 +135,44 @@ const SharePage = () => {
             data: files,
         };
         socketService.emit("uploadFile", sendingData);
+        files.forEach((file) => {
+            sendFile(file.file);
+        });
+    }
+
+    async function sendFile(file: File) {
+        dataChannel.onopen = () => {
+            const fileReader = new FileReader();
+            let offset = 0;
+
+            fileReader.onload = (event: ProgressEvent<FileReader>) => {
+                const result = event.target?.result;
+                if (result instanceof ArrayBuffer) {
+                    dataChannel.send(result);
+                    offset += result.byteLength;
+                    if (offset < file.size) {
+                        readSlice(offset);
+                    } else {
+                        dataChannel.send("EOF");
+                    }
+                }
+            };
+
+            const readSlice = (o: number) => {
+                const slice = file.slice(o, o + CHUNK_SIZE);
+                fileReader.readAsArrayBuffer(slice);
+            };
+
+            readSlice(0);
+        };
+
+        dataChannel.onerror = (error) => {
+            console.error("Data Channel Error:", error);
+        };
+
+        dataChannel.onclose = () => {
+            console.log("Data Channel closed");
+        };
     }
 
     function setSocketSetting(id: string): void {
@@ -132,43 +185,58 @@ const SharePage = () => {
 
     async function sendOffer(target: string) {
         const offer = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offer);
-        socketService.emit("offer", { target: target, data: offer });
+        peerConnection.setLocalDescription(offer);
+        const offerData: SocketFormat = {
+            sender: socketService.socket?.id!,
+            receiver: target,
+            data: offer,
+        };
+        console.log("offerData", offerData);
+        socketService.emit("offer", offerData);
     }
 
     async function handleOffer() {
-        socketService.on("offer", async (data) => {
-            await peerConnection.setRemoteDescription(data);
+        socketService.on("offer", async (data: SocketFormat) => {
+            peerConnection.setRemoteDescription(data.data as RTCSessionDescriptionInit);
             const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            socketService.emit("answer", { target: "answer", data: answer });
+            peerConnection.setLocalDescription(answer);
+            const answerData: SocketFormat = {
+                sender: socketService.socket?.id!,
+                receiver: data.sender,
+                data: answer,
+            };
+            console.log("answerData", answerData);
+            gatherICECandidates();
+            socketService.emit("answer", answerData);
         });
     }
 
     async function handleAnswer() {
-        socketService.on("answer", async (data) => {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
+        socketService.on("answer", async (data: SocketFormat) => {
+            console.log("answer", data);
+            peerConnection.setRemoteDescription(data.data as RTCSessionDescriptionInit);
+            gatherICECandidates();
         });
     }
 
     function gatherICECandidates() {
         peerConnection.onicecandidate = (event) => {
             if (event.candidate) {
-                socketService.emit("iceCandidate", { type: "candidate", candidate: event.candidate });
+                const candidateData: SocketFormat = {
+                    sender: socketService.socket?.id!,
+                    receiver: id!,
+                    data: event.candidate,
+                };
+                console.log("SEND ICE CANDIDATE", candidateData);
+                socketService.emit("iceCandidate", candidateData);
             }
         };
     }
 
     async function handleICECandidate() {
-        socketService.on("iceCandidate", async (data) => {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(data));
-            peerConnection.ondatachannel = (event) => {
-                const receiveChannel = event.channel;
-                receiveChannel.onmessage = (event) => {
-                    const data = event.data;
-                    console.log("Data received: ", data);
-                };
-            };
+        socketService.on("iceCandidate", async (data: SocketFormat) => {
+            console.log("iceCandidate GET", data);
+            peerConnection.addIceCandidate(new RTCIceCandidate(data.data));
         });
     }
 };

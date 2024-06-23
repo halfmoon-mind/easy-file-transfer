@@ -76,57 +76,55 @@ export class WebsocketGateway
 
   @SubscribeMessage('message')
   handleMessageEvent(client: Socket, data: any) {
+    const format: SocketFormat = data;
     console.log(`Client ${client.id} sent message: ${data}`);
-    this.server.to(data.room).emit('message', data);
+    this.server.to(format.receiver).emit('message', format);
   }
 
   @SubscribeMessage('uploadFile')
   handleUploadFile(client: Socket, socketData: SocketFormat) {
     const { receiver, data } = socketData;
+
+    console.log(`Client ${client.id} uploaded file: ${data}`);
     this.roomsService.uploadFile(receiver, data);
     this.server
       .to(receiver)
       .emit('roomStatus', this.roomsService.getRoomById(receiver));
   }
 
-  @SubscribeMessage('requestFile')
-  handleRequestFile(
-    client: Socket,
-    data: { fileId: string; requesterId: string },
-  ) {
-    console.log(`Client ${client.id} requested file: ${data.fileId}`);
-    const room = this.roomsService.getRoomByUserId(data.requesterId);
-    this.server
-      .to(room.id)
-      .emit('fileRequestResponse', data.fileId, data.requesterId);
+  @SubscribeMessage('offer')
+  async handleSendOffer(client: Socket, datas: SocketFormat) {
+    const { receiver, data } = datas;
+    console.log(`Client ${client.id} sent offer to ${receiver}`);
+    const format: SocketFormat = {
+      sender: client.id,
+      receiver: receiver,
+      data: data,
+    };
+    this.server.to(receiver).emit('offer', format);
   }
 
-  @SubscribeMessage('sendOffer')
-  async handleSendOffer(
-    client: Socket,
-    data: { sdp: RTCSessionDescriptionInit; target: string },
-  ) {
-    console.log(`Client ${client.id} sent offer to ${data.target}`);
-    this.server
-      .to(data.target)
-      .emit('receiveOffer', { sdp: data.sdp, requesterId: client.id });
-  }
-
-  @SubscribeMessage('sendAnswer')
-  async handleSendAnswer(
-    client: Socket,
-    data: { sdp: RTCSessionDescriptionInit; target: string },
-  ) {
-    console.log(`Client ${client.id} sent answer to ${data.target}`);
-    this.server.to(data.target).emit('receiveAnswer', data.sdp);
+  @SubscribeMessage('answer')
+  async handleSendAnswer(client: Socket, datas: SocketFormat) {
+    const { receiver, data } = datas;
+    console.log(`Client ${client.id} sent answer to ${receiver}`);
+    const format: SocketFormat = {
+      sender: client.id,
+      receiver: receiver,
+      data: data,
+    };
+    this.server.to(receiver).emit('answer', format);
   }
 
   @SubscribeMessage('iceCandidate')
-  async handleIceCandidate(
-    client: Socket,
-    data: { candidate: RTCIceCandidateInit; target: string },
-  ) {
-    console.log(`Client ${client.id} sent ICE candidate to ${data.target}`);
-    this.server.to(data.target).emit('iceCandidate', data.candidate);
+  async handleIceCandidate(client: Socket, datas: SocketFormat) {
+    const { receiver, data } = datas;
+    console.log(`Client ${client.id} sent ICE candidate to ${receiver}`);
+    const format: SocketFormat = {
+      sender: client.id,
+      receiver: receiver,
+      data: data,
+    };
+    this.server.to(receiver).emit('iceCandidate', format);
   }
 }
