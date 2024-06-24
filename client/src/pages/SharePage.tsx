@@ -88,9 +88,6 @@ const SharePage = () => {
 
     function onDownloadFile(file: FileData) {
         const targetFile = room?.files.find((f) => f.id === file.id);
-        console.log("FILE : ", targetFile);
-        // targetFile?.file's type
-        console.log("FILE TYPE : ", typeof targetFile?.file);
         if (!targetFile) {
             return;
         }
@@ -185,7 +182,7 @@ const SharePage = () => {
 
     async function sendOffer(target: string) {
         const offer = await peerConnection.createOffer();
-        peerConnection.setLocalDescription(offer);
+        await peerConnection.setLocalDescription(offer);
         const offerData: SocketFormat = {
             sender: socketService.socket?.id!,
             receiver: target,
@@ -197,16 +194,16 @@ const SharePage = () => {
 
     async function handleOffer() {
         socketService.on("offer", async (data: SocketFormat) => {
-            peerConnection.setRemoteDescription(data.data as RTCSessionDescriptionInit);
+            await peerConnection.setRemoteDescription(data.data as RTCSessionDescriptionInit);
             const answer = await peerConnection.createAnswer();
-            peerConnection.setLocalDescription(answer);
+            await peerConnection.setLocalDescription(answer);
             const answerData: SocketFormat = {
                 sender: socketService.socket?.id!,
                 receiver: data.sender,
                 data: answer,
             };
             console.log("answerData", answerData);
-            gatherICECandidates();
+            // gatherICECandidates();
             socketService.emit("answer", answerData);
         });
     }
@@ -214,8 +211,13 @@ const SharePage = () => {
     async function handleAnswer() {
         socketService.on("answer", async (data: SocketFormat) => {
             console.log("answer", data);
-            peerConnection.setRemoteDescription(data.data as RTCSessionDescriptionInit);
-            gatherICECandidates();
+            if (peerConnection.signalingState !== "have-local-offer") {
+                console.warn("Cannot set remote answer in state: " + peerConnection.signalingState);
+                return;
+            }
+
+            await peerConnection.setRemoteDescription(data.data as RTCSessionDescriptionInit);
+            // gatherICECandidates();
         });
     }
 
@@ -236,7 +238,7 @@ const SharePage = () => {
     async function handleICECandidate() {
         socketService.on("iceCandidate", async (data: SocketFormat) => {
             console.log("iceCandidate GET", data);
-            peerConnection.addIceCandidate(new RTCIceCandidate(data.data));
+            await peerConnection.addIceCandidate(new RTCIceCandidate(data.data));
         });
     }
 };
