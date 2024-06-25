@@ -32,6 +32,10 @@ const SharePage = () => {
         setSocketSetting(id!);
     }, [id]);
 
+    useEffect(() => {
+        console.log("PEER CONNECTION", peerConnection);
+    }, [peerConnection]);
+
     return (
         <div>
             id: {id}
@@ -177,12 +181,13 @@ const SharePage = () => {
         socketService.on("roomStatus", (data: Room) => setRoom(data));
         handleOffer();
         handleAnswer();
+        gatherICECandidates();
         handleICECandidate();
     }
 
     async function sendOffer(target: string) {
         const offer = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offer);
+        peerConnection.setLocalDescription(offer);
         const offerData: SocketFormat = {
             sender: socketService.socket?.id!,
             receiver: target,
@@ -196,14 +201,13 @@ const SharePage = () => {
         socketService.on("offer", async (data: SocketFormat) => {
             await peerConnection.setRemoteDescription(data.data as RTCSessionDescriptionInit);
             const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
+            peerConnection.setLocalDescription(answer);
             const answerData: SocketFormat = {
                 sender: socketService.socket?.id!,
                 receiver: data.sender,
                 data: answer,
             };
             console.log("answerData", answerData);
-            // gatherICECandidates();
             socketService.emit("answer", answerData);
         });
     }
@@ -211,13 +215,7 @@ const SharePage = () => {
     async function handleAnswer() {
         socketService.on("answer", async (data: SocketFormat) => {
             console.log("answer", data);
-            if (peerConnection.signalingState !== "have-local-offer") {
-                console.warn("Cannot set remote answer in state: " + peerConnection.signalingState);
-                return;
-            }
-
             await peerConnection.setRemoteDescription(data.data as RTCSessionDescriptionInit);
-            // gatherICECandidates();
         });
     }
 
