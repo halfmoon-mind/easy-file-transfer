@@ -32,7 +32,6 @@ export class WebsocketGateway
     client.join(roomId);
     this.roomsService.addUserToRoom(roomId, client.id);
     const roomData = this.roomsService.getRoomById(roomId);
-    console.log(`ROOM :roomData`, roomData);
     this.server.to(roomId).emit('roomStatus', roomData);
   }
 
@@ -59,7 +58,6 @@ export class WebsocketGateway
   }
 
   leaveAllRooms(client: Socket): void {
-    console.log(`Client ${client.id} left all rooms`);
     this.roomsService.removeUserFromRoom(client.id);
 
     const rooms = this.roomsService.getRooms();

@@ -201,15 +201,15 @@ const SharePage = () => {
 
   async function handleOffer() {
     socketService.on('offer', async (data: SocketFormat) => {
-      await peerConnection.setRemoteDescription(data.data as RTCSessionDescriptionInit);
+      peerConnection.setRemoteDescription(data.data as RTCSessionDescriptionInit);
       const answer = await peerConnection.createAnswer();
-      peerConnection.setLocalDescription(answer);
+      await peerConnection.setLocalDescription(answer);
       const answerData: SocketFormat = {
         sender: socketService.socket?.id!,
         receiver: data.sender,
         data: answer,
       };
-      console.log('answerData', answerData);
+      console.log('answer', answerData);
       socketService.emit('answer', answerData);
     });
   }
@@ -217,7 +217,7 @@ const SharePage = () => {
   async function handleAnswer() {
     socketService.on('answer', async (data: SocketFormat) => {
       console.log('answer', data);
-      await peerConnection.setRemoteDescription(data.data as RTCSessionDescriptionInit);
+      peerConnection.setRemoteDescription(data.data as RTCSessionDescriptionInit);
     });
   }
 

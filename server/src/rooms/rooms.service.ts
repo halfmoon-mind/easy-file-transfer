@@ -73,8 +73,6 @@ export class RoomsService {
     this.rooms = this.rooms.map((currentRoom) =>
       currentRoom.id === roomId ? room : currentRoom,
     );
-    console.log('rooms', this.rooms);
-    console.log('room', room);
     return room;
   }
 
