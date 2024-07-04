@@ -1,0 +1,37 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+#root {
+  width: 100%;
+  max-width: 500px;
+  margin-bottom: 20px;
+}
+input[type='file'],
+button,
+progress {
+  width: 100%;
+  max-width: 500px;
+  padding: 10px;
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+label {
+  font-size: 20px;
+}
+#receivedFiles {
+  width: 100%;
+  max-width: 500px;
+  margin-bottom: 20px;
+}
+@media (min-width: 768px) {
+  input[type='file'],
+  button,
+  progress {
+    max-width: 600px;
+  }
+}
