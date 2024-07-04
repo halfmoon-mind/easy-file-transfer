@@ -47,7 +47,9 @@ const useSocket = (roomId: string) => {
     socketRef.current?.off(event, callback);
   };
 
-  return { isConnected, emit, on, off };
+  const id = socketRef.current?.id;
+
+  return { isConnected, emit, on, off, id };
 };
 
 export default useSocket;
