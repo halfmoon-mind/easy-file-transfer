@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { RequestMethod, useApi } from '../hooks/useApis';
 // import Description from '../components/Description';
 import '../styles/MainPage.css';
@@ -13,9 +13,14 @@ const MainPage = () => {
 
   const handleMakeRoom = async () => {
     await fetchData();
-    const id = data.id;
-    window.location.href = `/rooms/${id}`;
   };
+
+  useEffect(() => {
+    if (data) {
+      const id = data.id;
+      window.location.href = `/rooms/${id}`;
+    }
+  }, [data]);
 
   const handleGoingToRoom = () => {
     if (roomId.length < 6) {

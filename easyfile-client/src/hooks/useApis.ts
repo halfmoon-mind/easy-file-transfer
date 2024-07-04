@@ -38,7 +38,7 @@ const useApi = ({
     } finally {
       setLoading(false);
     }
-  }, [endpoint]);
+  }, [endpoint, method, body]);
 
   return { data, loading, error, fetchData };
 };
