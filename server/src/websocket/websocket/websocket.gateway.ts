@@ -125,4 +125,16 @@ export class WebsocketGateway
     };
     this.server.to(receiver).emit('iceCandidate', format);
   }
+
+  @SubscribeMessage('requestFile')
+  async handleRequestFile(client: Socket, datas: SocketFormat) {
+    const { receiver, data } = datas;
+    console.log(`Client ${client.id} request file to ${receiver}`);
+    const format: SocketFormat = {
+      sender: client.id,
+      receiver: receiver,
+      data: data,
+    };
+    this.server.to(receiver).emit('requestFile', format);
+  }
 }
