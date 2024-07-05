@@ -111,6 +111,7 @@ const SharePage = () => {
       peerConnection.addIceCandidate(data.data);
     });
   }
+
   function connectionStatus() {
     peerConnection.addEventListener('connectionstatechange', (_) => {
       if (peerConnection.connectionState === 'connected') {

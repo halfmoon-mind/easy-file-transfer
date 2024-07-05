@@ -49,14 +49,6 @@ export class WebsocketGateway
     this.server.to(roomId).emit('roomStatus', room);
   }
 
-  @SubscribeMessage('userCount')
-  handleUserCount(client: Socket, room: string): void {
-    const roomClients = this.server.sockets.adapter.rooms.get(room);
-    if (roomClients) {
-      client.emit('userCount', roomClients.size);
-    }
-  }
-
   leaveAllRooms(client: Socket): void {
     this.roomsService.removeUserFromRoom(client.id);
 
@@ -92,10 +84,10 @@ export class WebsocketGateway
 
   @SubscribeMessage('offer')
   async handleSendOffer(client: Socket, datas: SocketFormat) {
-    const { receiver, data } = datas;
-    console.log(`Client ${client.id} sent offer to ${receiver}`);
+    const { sender, receiver, data } = datas;
+    console.log(`Client ${sender} sent offer to ${receiver}`);
     const format: SocketFormat = {
-      sender: client.id,
+      sender: sender,
       receiver: receiver,
       data: data,
     };
@@ -104,10 +96,10 @@ export class WebsocketGateway
 
   @SubscribeMessage('answer')
   async handleSendAnswer(client: Socket, datas: SocketFormat) {
-    const { receiver, data } = datas;
-    console.log(`Client ${client.id} sent answer to ${receiver}`);
+    const { sender, receiver, data } = datas;
+    console.log(`Client ${sender} sent answer to ${receiver}`);
     const format: SocketFormat = {
-      sender: client.id,
+      sender: sender,
       receiver: receiver,
       data: data,
     };
@@ -116,10 +108,10 @@ export class WebsocketGateway
 
   @SubscribeMessage('iceCandidate')
   async handleIceCandidate(client: Socket, datas: SocketFormat) {
-    const { receiver, data } = datas;
-    console.log(`Client ${client.id} sent ICE candidate to ${receiver}`);
+    const { sender, receiver, data } = datas;
+    console.log(`Client ${sender} sent ICE candidate to ${receiver}`);
     const format: SocketFormat = {
-      sender: client.id,
+      sender: sender,
       receiver: receiver,
       data: data,
     };
@@ -128,10 +120,10 @@ export class WebsocketGateway
 
   @SubscribeMessage('requestFile')
   async handleRequestFile(client: Socket, datas: SocketFormat) {
-    const { receiver, data } = datas;
-    console.log(`Client ${client.id} request file to ${receiver}`);
+    const { sender, receiver, data } = datas;
+    console.log(`Client ${sender} request file to ${receiver}`);
     const format: SocketFormat = {
-      sender: client.id,
+      sender: sender,
       receiver: receiver,
       data: data,
     };
