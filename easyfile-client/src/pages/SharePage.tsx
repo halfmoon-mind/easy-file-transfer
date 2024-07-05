@@ -80,6 +80,7 @@ const SharePage = () => {
       };
       console.log('answer sent');
       socket.emit('answer', response);
+      createICECandidate();
     });
   }
 
@@ -87,27 +88,28 @@ const SharePage = () => {
     socket.on('answer', async (data: SocketFormat) => {
       await peerConnection.setRemoteDescription(data.data);
       console.log('answer received');
+      createICECandidate();
     });
   }
 
   async function createICECandidate() {
-    peerConnection.onicecandidate = (event) => {
+    peerConnection.addEventListener('icecandidate', (event) => {
       if (event.candidate) {
         const receiver = room?.users.find((user) => user !== socket.id);
         const data: SocketFormat = {
           sender: socket.id!,
           receiver: receiver!,
-          data: event.candidate
+          data: { 'new-ice-candidate': event.candidate }
         };
-        console.log('iceCandidate sent');
+        console.log(`iceCandidate sent: ${JSON.stringify(data, null, 2)}`);
         socket.emit('iceCandidate', data);
       }
-    };
+    });
   }
 
   function handleIceCandidate() {
     socket.on('iceCandidate', (data: SocketFormat) => {
-      console.log('iceCandidate received');
+      console.log(`iceCandidate received : ${data}`);
       peerConnection.addIceCandidate(data.data);
     });
   }
@@ -124,7 +126,6 @@ const SharePage = () => {
     refreshRoomStatus();
     handleOffer();
     handleAnswer();
-    createICECandidate();
     handleIceCandidate();
     connectionStatus();
   }, []);
