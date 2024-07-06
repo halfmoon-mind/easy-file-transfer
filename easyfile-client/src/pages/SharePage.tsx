@@ -112,26 +112,28 @@ const SharePage = () => {
         setCurrentFileMetadata(metadata);
         setReceivedFileBuffers((prev) => ({ ...prev, [metadata.id]: [] }));
       } else {
-        const fileBuffer = receivedFileBuffers[currentFileMetadata!.id] || [];
-        fileBuffer.push(event.data);
-        setReceivedFileBuffers((prev) => ({
-          ...prev,
-          [currentFileMetadata!.id]: fileBuffer
-        }));
+        if (currentFileMetadata) {
+          const fileBuffer = receivedFileBuffers[currentFileMetadata!.id] || [];
+          fileBuffer.push(event.data);
+          setReceivedFileBuffers((prev) => ({
+            ...prev,
+            [currentFileMetadata!.id]: fileBuffer
+          }));
 
-        const receivedSize = fileBuffer.reduce(
-          (acc, chunk) => acc + chunk.byteLength,
-          0
-        );
-        if (receivedSize >= currentFileMetadata!.file.size) {
-          const blob = new Blob(fileBuffer);
-          saveFile(blob, currentFileMetadata!.name);
-          setReceivedFileBuffers((prev) => {
-            const newBuffers = { ...prev };
-            delete newBuffers[currentFileMetadata!.id];
-            return newBuffers;
-          });
-          setCurrentFileMetadata(null);
+          const receivedSize = fileBuffer.reduce(
+            (acc, chunk) => acc + chunk.byteLength,
+            0
+          );
+          if (receivedSize >= currentFileMetadata!.file.size) {
+            const blob = new Blob(fileBuffer);
+            saveFile(blob, currentFileMetadata!.name);
+            setReceivedFileBuffers((prev) => {
+              const newBuffers = { ...prev };
+              delete newBuffers[currentFileMetadata!.id];
+              return newBuffers;
+            });
+            setCurrentFileMetadata(null);
+          }
         }
       }
     };
@@ -218,7 +220,7 @@ const SharePage = () => {
       console.log('File requested', targetFileData);
       if (targetFileData) {
         console.log('File found', targetFileData);
-        sendFileInChunks(new Blob([targetFileData.file]));
+        sendFileInChunks(new Blob([targetFileData.file]), data.data);
       }
     };
 
@@ -234,11 +236,14 @@ const SharePage = () => {
     return () => cleanup();
   }, [handleFileRequest]);
 
-  const sendFileInChunks = (file: Blob) => {
+  const sendFileInChunks = (file: Blob, fileData: FileData) => {
     if (!dataChannel || dataChannel.readyState !== 'open') {
       console.error('Data channel not available or not open');
       return;
     }
+
+    dataChannel.send(JSON.stringify(fileData));
+    setCurrentFileMetadata(fileData);
 
     const reader = new FileReader();
     let offset = 0;
