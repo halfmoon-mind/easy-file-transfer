@@ -133,13 +133,26 @@ const SharePage = () => {
     handleFileRequest();
   }, []);
 
-  function handleFileClick(requestFile: FileData) {
+  function handleFileClick(targetFile: FileData) {
     const sender = socket.id!;
-    const receiver = room?.users.find((user) => user !== sender);
+    const receiver = room?.files.find(
+      (file) => file.id === targetFile.id
+    )?.user;
+    if (sender == receiver) {
+      const url = URL.createObjectURL(targetFile.file);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = targetFile.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      return;
+    }
     const data: SocketFormat = {
       sender: sender,
       receiver: receiver!,
-      data: requestFile
+      data: targetFile
     };
     socket.emit('requestFile', data);
     console.log('File clicked', data);
@@ -150,13 +163,12 @@ const SharePage = () => {
       console.log('File requested', data);
       const file = room?.files.find((file) => file.id === data.data.id);
       if (file) {
-        sendFileInChunks(file);
+        sendFileInChunks(new Blob([file.file]));
       }
     });
   }
 
-  const sendFileInChunks = (fileData: FileData) => {
-    const file = fileData.file;
+  const sendFileInChunks = (file: Blob) => {
     const reader = new FileReader();
     let offset = 0;
     reader.onload = () => {
