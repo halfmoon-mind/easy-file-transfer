@@ -264,7 +264,6 @@ const SharePage = () => {
       <FileUploadComponent
         onUploadFile={(files) => {
           socket.emit('uploadFile', { receiver: id, data: files });
-          refreshRoomStatus();
         }}
         userId={socket.id!}
       />
