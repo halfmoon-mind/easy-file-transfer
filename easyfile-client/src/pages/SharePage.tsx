@@ -28,48 +28,13 @@ const SharePage = () => {
       ]
     })
   );
-  const [dataChannel] = useState(
-    peerConnection.createDataChannel('dataChannel')
-  );
+  const [dataChannel, setDataChannel] = useState<RTCDataChannel | null>(null);
 
   const [receivedFileBuffers, setReceivedFileBuffers] = useState<{
     [key: string]: ArrayBuffer[];
   }>({});
   const [currentFileMetadata, setCurrentFileMetadata] =
     useState<FileData | null>(null);
-
-  dataChannel.addEventListener('open', (_) => {
-    console.log('dataChannel opened');
-  });
-
-  dataChannel.addEventListener('message', (event) => {
-    console.log('dataChannel message', event.data);
-    if (typeof event.data === 'string') {
-      const metadata: FileData = JSON.parse(event.data);
-      setCurrentFileMetadata(metadata);
-      setReceivedFileBuffers((prev) => ({ ...prev, [metadata.id]: [] }));
-    } else {
-      const fileBuffer = receivedFileBuffers[currentFileMetadata!.id] || [];
-      fileBuffer.push(event.data);
-      setReceivedFileBuffers((prev) => ({
-        ...prev,
-        [currentFileMetadata!.id]: fileBuffer
-      }));
-
-      const receivedSize = fileBuffer.reduce(
-        (acc, chunk) => acc + chunk.byteLength,
-        0
-      );
-      if (receivedSize === currentFileMetadata!.file.size) {
-        const blob = new Blob(fileBuffer);
-        saveFile(blob, currentFileMetadata!.name);
-      }
-    }
-  });
-
-  dataChannel.addEventListener('close', (_) => {
-    console.log('dataChannel closed');
-  });
 
   const saveFile = (blob: Blob, fileName: string) => {
     const link = document.createElement('a');
@@ -96,6 +61,10 @@ const SharePage = () => {
   }
 
   async function createOffer() {
+    const dataChannel = peerConnection.createDataChannel('dataChannel');
+    setDataChannel(dataChannel);
+    setupDataChannelListeners(dataChannel);
+
     const offer = await peerConnection.createOffer();
     await peerConnection.setLocalDescription(offer);
     const receiver = room?.users.find((user) => user !== socket.id);
@@ -112,6 +81,13 @@ const SharePage = () => {
     socket.on('offer', async (data: SocketFormat) => {
       console.log('offer received');
       await peerConnection.setRemoteDescription(data.data);
+
+      peerConnection.ondatachannel = (event) => {
+        const receivedDataChannel = event.channel;
+        setDataChannel(receivedDataChannel);
+        setupDataChannelListeners(receivedDataChannel);
+      };
+
       const answer = await peerConnection.createAnswer();
       await peerConnection.setLocalDescription(answer);
       const response: SocketFormat = {
@@ -123,6 +99,42 @@ const SharePage = () => {
       socket.emit('answer', response);
       createICECandidate();
     });
+  }
+
+  async function setupDataChannelListeners(channel: RTCDataChannel) {
+    channel.onopen = () => console.log('Data channel opened');
+    channel.onclose = () => console.log('Data channel closed');
+    channel.onerror = (error) => console.error('Data channel error:', error);
+    channel.onmessage = (event) => {
+      console.log('Data channel message', event.data);
+      if (typeof event.data === 'string') {
+        const metadata: FileData = JSON.parse(event.data);
+        setCurrentFileMetadata(metadata);
+        setReceivedFileBuffers((prev) => ({ ...prev, [metadata.id]: [] }));
+      } else {
+        const fileBuffer = receivedFileBuffers[currentFileMetadata!.id] || [];
+        fileBuffer.push(event.data);
+        setReceivedFileBuffers((prev) => ({
+          ...prev,
+          [currentFileMetadata!.id]: fileBuffer
+        }));
+
+        const receivedSize = fileBuffer.reduce(
+          (acc, chunk) => acc + chunk.byteLength,
+          0
+        );
+        if (receivedSize >= currentFileMetadata!.file.size) {
+          const blob = new Blob(fileBuffer);
+          saveFile(blob, currentFileMetadata!.name);
+          setReceivedFileBuffers((prev) => {
+            const newBuffers = { ...prev };
+            delete newBuffers[currentFileMetadata!.id];
+            return newBuffers;
+          });
+          setCurrentFileMetadata(null);
+        }
+      }
+    };
   }
 
   async function handleAnswer() {
@@ -223,6 +235,11 @@ const SharePage = () => {
   }, [handleFileRequest]);
 
   const sendFileInChunks = (file: Blob) => {
+    if (!dataChannel || dataChannel.readyState !== 'open') {
+      console.error('Data channel not available or not open');
+      return;
+    }
+
     const reader = new FileReader();
     let offset = 0;
     reader.onload = () => {
@@ -244,6 +261,8 @@ const SharePage = () => {
           }
         };
         sendChunk();
+      } else {
+        console.error('Data channel not open');
       }
     };
 
