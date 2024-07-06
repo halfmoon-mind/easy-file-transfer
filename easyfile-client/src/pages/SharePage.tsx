@@ -32,17 +32,53 @@ const SharePage = () => {
     peerConnection.createDataChannel('dataChannel')
   );
 
+  const [receivedFileBuffers, setReceivedFileBuffers] = useState<{
+    [key: string]: ArrayBuffer[];
+  }>({});
+  const [currentFileMetadata, setCurrentFileMetadata] =
+    useState<FileData | null>(null);
+
   dataChannel.addEventListener('open', (_) => {
     console.log('dataChannel opened');
   });
 
   dataChannel.addEventListener('message', (event) => {
-    console.log('dataChannel message:', event.data);
+    console.log('dataChannel message', event.data);
+    if (typeof event.data === 'string') {
+      const metadata: FileData = JSON.parse(event.data);
+      setCurrentFileMetadata(metadata);
+      setReceivedFileBuffers((prev) => ({ ...prev, [metadata.id]: [] }));
+    } else {
+      const fileBuffer = receivedFileBuffers[currentFileMetadata!.id] || [];
+      fileBuffer.push(event.data);
+      setReceivedFileBuffers((prev) => ({
+        ...prev,
+        [currentFileMetadata!.id]: fileBuffer
+      }));
+
+      const receivedSize = fileBuffer.reduce(
+        (acc, chunk) => acc + chunk.byteLength,
+        0
+      );
+      if (receivedSize === currentFileMetadata!.file.size) {
+        const blob = new Blob(fileBuffer);
+        saveFile(blob, currentFileMetadata!.name);
+      }
+    }
   });
 
   dataChannel.addEventListener('close', (_) => {
     console.log('dataChannel closed');
   });
+
+  const saveFile = (blob: Blob, fileName: string) => {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   function handleRefreshRoomStatus() {
     socket.on('roomStatus', (room: Room) => {
@@ -158,8 +194,6 @@ const SharePage = () => {
       data: targetFileData
     };
     socket.emit('requestFile', data);
-    console.log('File clicked', data);
-    console.log('RoomStatus', room);
   }
 
   const handleFileRequest = useCallback(() => {
