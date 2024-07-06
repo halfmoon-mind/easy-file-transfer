@@ -1,7 +1,7 @@
 import { useParams } from 'react-router-dom';
 import useSocket from '../hooks/useSocket';
 import { QrCodeImage } from '../components/QrcodeComponent';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import SocketFormat from '../types/SocketFormat';
 import { FileData, Room } from '../types/Room';
 import { FileUploadComponent } from '../components/FileUploadComponent';
@@ -50,7 +50,7 @@ const SharePage = () => {
         ...file,
         file: new File([file.file], file.name, { type: file.file.type })
       }));
-      console.log(data);
+      console.log(room);
       setRoom(room);
     });
   }
@@ -134,7 +134,6 @@ const SharePage = () => {
     handleAnswer();
     handleIceCandidate();
     connectionStatus();
-    handleFileRequest();
   }, []);
 
   function handleFileClick(targetFileData: FileData) {
@@ -163,8 +162,8 @@ const SharePage = () => {
     console.log('RoomStatus', room);
   }
 
-  function handleFileRequest() {
-    socket.on('requestFile', (data: SocketFormat) => {
+  const handleFileRequest = useCallback(() => {
+    const onRequestFile = (data: SocketFormat) => {
       console.log('File requested', data);
       console.log('Room', room);
       const targetFileData = room?.files.find(
@@ -175,8 +174,19 @@ const SharePage = () => {
         console.log('File found', targetFileData);
         sendFileInChunks(new Blob([targetFileData.file]));
       }
-    });
-  }
+    };
+
+    socket.on('requestFile', onRequestFile);
+
+    return () => {
+      socket.off('requestFile', onRequestFile);
+    };
+  }, [room, socket]);
+
+  useEffect(() => {
+    const cleanup = handleFileRequest();
+    return () => cleanup();
+  }, [handleFileRequest]);
 
   const sendFileInChunks = (file: Blob) => {
     const reader = new FileReader();
