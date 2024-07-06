@@ -3,9 +3,11 @@ import useSocket from '../hooks/useSocket';
 import { QrCodeImage } from '../components/QrcodeComponent';
 import { useEffect, useState } from 'react';
 import SocketFormat from '../types/SocketFormat';
-import { Room } from '../types/Room';
+import { FileData, Room } from '../types/Room';
 import { FileUploadComponent } from '../components/FileUploadComponent';
 import { RoomStatusComponent } from '../components/RoomStatusComponent';
+
+const CHUNK_SIZE = 16384;
 
 const SharePage = () => {
   const id = useParams<{ id: string }>().id;
@@ -128,13 +130,69 @@ const SharePage = () => {
     handleAnswer();
     handleIceCandidate();
     connectionStatus();
+    handleFileRequest();
   }, []);
+
+  function handleFileClick(requestFile: FileData) {
+    const sender = socket.id!;
+    const receiver = room?.users.find((user) => user !== sender);
+    const data: SocketFormat = {
+      sender: sender,
+      receiver: receiver!,
+      data: requestFile
+    };
+    socket.emit('requestFile', data);
+    console.log('File clicked', data);
+  }
+
+  function handleFileRequest() {
+    socket.on('requestFile', (data: SocketFormat) => {
+      console.log('File requested', data);
+      const file = room?.files.find((file) => file.id === data.data.id);
+      if (file) {
+        sendFileInChunks(file);
+      }
+    });
+  }
+
+  const sendFileInChunks = (fileData: FileData) => {
+    const file = fileData.file;
+    const reader = new FileReader();
+    let offset = 0;
+    reader.onload = () => {
+      const chunk = reader.result as ArrayBuffer;
+      const sendChunk = () => {
+        try {
+          dataChannel.send(chunk);
+          console.log('Chunk sent', offset, chunk);
+          offset += chunk.byteLength;
+          if (offset < file.size) {
+            readSlice(offset);
+          } else {
+            dataChannel.send('EOF');
+            console.log('File sent');
+          }
+        } catch (error) {
+          console.error('Error sending chunk', error);
+          setTimeout(sendChunk, 100);
+        }
+      };
+      sendChunk();
+    };
+
+    const readSlice = (o: number) => {
+      const slice = file.slice(o, o + CHUNK_SIZE);
+      reader.readAsArrayBuffer(slice);
+    };
+
+    readSlice(0);
+  };
 
   return (
     <div>
       id: {id}
       <QrCodeImage />
-      <RoomStatusComponent room={room!} />
+      <RoomStatusComponent room={room!} handleFileClick={handleFileClick} />
       <button onClick={() => createOffer()}>test</button>
       <FileUploadComponent
         onUploadFile={(files) => {
