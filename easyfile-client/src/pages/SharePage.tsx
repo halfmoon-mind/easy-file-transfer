@@ -33,16 +33,22 @@ const SharePage = () => {
   const [receivedFileBuffers, setReceivedFileBuffers] = useState<{
     [key: string]: ArrayBuffer[];
   }>({});
-  const [currentFileMetadata, setCurrentFileMetadata] =
-    useState<FileData | null>(null);
+  let currentFileMetadata: FileData | null = null;
+  // const [currentFileMetadata, setCurrentFileMetadata] =
+  //   useState<FileData | null>(null);
 
   const saveFile = (blob: Blob, fileName: string) => {
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    console.log('Saving file:', fileName);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    console.log('File download initiated');
   };
 
   function handleRefreshRoomStatus() {
@@ -108,32 +114,61 @@ const SharePage = () => {
     channel.onmessage = (event) => {
       console.log('Data channel message', event.data);
       if (typeof event.data === 'string') {
-        const metadata: FileData = JSON.parse(event.data);
-        setCurrentFileMetadata(metadata);
-        setReceivedFileBuffers((prev) => ({ ...prev, [metadata.id]: [] }));
+        console.log('Received metadata:', event.data);
+        try {
+          const metadata: FileData = JSON.parse(event.data);
+          // setCurrentFileMetadata(metadata);
+          currentFileMetadata = metadata;
+          console.log('Metadata parsed:', metadata);
+          setReceivedFileBuffers((prev) => ({ ...prev, [metadata.id]: [] }));
+        } catch (error) {
+          console.error('Error parsing metadata:', error);
+        }
       } else {
-        if (currentFileMetadata) {
-          const fileBuffer = receivedFileBuffers[currentFileMetadata!.id] || [];
-          fileBuffer.push(event.data);
-          setReceivedFileBuffers((prev) => ({
-            ...prev,
-            [currentFileMetadata!.id]: fileBuffer
-          }));
+        if (currentFileMetadata !== null) {
+          console.log('Received chunk:', event.data);
+          setReceivedFileBuffers((prev) => {
+            const fileBuffer = [
+              ...(prev[currentFileMetadata!.id] || []),
+              event.data
+            ];
+            const newBuffers = {
+              ...prev,
+              [currentFileMetadata!.id]: fileBuffer
+            };
 
-          const receivedSize = fileBuffer.reduce(
-            (acc, chunk) => acc + chunk.byteLength,
-            0
-          );
-          if (receivedSize >= currentFileMetadata!.file.size) {
-            const blob = new Blob(fileBuffer);
-            saveFile(blob, currentFileMetadata!.name);
-            setReceivedFileBuffers((prev) => {
-              const newBuffers = { ...prev };
-              delete newBuffers[currentFileMetadata!.id];
-              return newBuffers;
-            });
-            setCurrentFileMetadata(null);
-          }
+            const receivedSize = fileBuffer.reduce(
+              (acc, chunk) => acc + chunk.byteLength,
+              0
+            );
+
+            console.log(
+              `Received size:${receivedSize}, total size:${currentFileMetadata!.file.size}`
+            );
+
+            // if (receivedSize >= currentFileMetadata!.file.size) {
+            if (event.data.byteLength < CHUNK_SIZE) {
+              console.log('File fully received, preparing download...');
+
+              const allChunks = newBuffers[currentFileMetadata!.id];
+              const blob = new Blob(allChunks, {
+                type: currentFileMetadata!.file.type
+              });
+
+              saveFile(blob, currentFileMetadata!.name);
+
+              const { [currentFileMetadata!.id]: _, ...remainingBuffers } =
+                newBuffers;
+
+              // setCurrentFileMetadata(null);
+              currentFileMetadata = null;
+              return remainingBuffers;
+            }
+
+            return newBuffers;
+          });
+        } else {
+          console.log('Received chunk but no metadata');
         }
       }
     };
@@ -220,7 +255,7 @@ const SharePage = () => {
       console.log('File requested', targetFileData);
       if (targetFileData) {
         console.log('File found', targetFileData);
-        sendFileInChunks(new Blob([targetFileData.file]), data.data);
+        sendFileInChunks(new Blob([targetFileData.file]), targetFileData);
       }
     };
 
@@ -243,7 +278,8 @@ const SharePage = () => {
     }
 
     dataChannel.send(JSON.stringify(fileData));
-    setCurrentFileMetadata(fileData);
+    // setCurrentFileMetadata(fileData);
+    currentFileMetadata = fileData;
 
     const reader = new FileReader();
     let offset = 0;
