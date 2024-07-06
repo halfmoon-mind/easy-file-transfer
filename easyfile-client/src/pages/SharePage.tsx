@@ -44,16 +44,19 @@ const SharePage = () => {
     console.log('dataChannel closed');
   });
 
-  async function refreshRoomStatus() {
-    socket.emit('roomStatus', id);
-    socket.on('roomStatus', (data: Room) => {
-      data.files = data.files.map((file) => ({
+  function handleRefreshRoomStatus() {
+    socket.on('roomStatus', (room: Room) => {
+      room.files = room.files.map((file) => ({
         ...file,
         file: new File([file.file], file.name, { type: file.file.type })
       }));
       console.log(data);
-      setRoom(data);
+      setRoom(room);
     });
+  }
+
+  function refreshRoomStatus() {
+    socket.emit('roomStatus', id);
   }
 
   async function createOffer() {
@@ -126,6 +129,7 @@ const SharePage = () => {
 
   useEffect(() => {
     refreshRoomStatus();
+    handleRefreshRoomStatus();
     handleOffer();
     handleAnswer();
     handleIceCandidate();
@@ -133,16 +137,16 @@ const SharePage = () => {
     handleFileRequest();
   }, []);
 
-  function handleFileClick(targetFile: FileData) {
+  function handleFileClick(targetFileData: FileData) {
     const sender = socket.id!;
     const receiver = room?.files.find(
-      (file) => file.id === targetFile.id
+      (file) => file.id === targetFileData.id
     )?.user;
     if (sender == receiver) {
-      const url = URL.createObjectURL(targetFile.file);
+      const url = URL.createObjectURL(targetFileData.file);
       const a = document.createElement('a');
       a.href = url;
-      a.download = targetFile.name;
+      a.download = targetFileData.name;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -152,18 +156,24 @@ const SharePage = () => {
     const data: SocketFormat = {
       sender: sender,
       receiver: receiver!,
-      data: targetFile
+      data: targetFileData
     };
     socket.emit('requestFile', data);
     console.log('File clicked', data);
+    console.log('RoomStatus', room);
   }
 
   function handleFileRequest() {
     socket.on('requestFile', (data: SocketFormat) => {
       console.log('File requested', data);
-      const file = room?.files.find((file) => file.id === data.data.id);
-      if (file) {
-        sendFileInChunks(new Blob([file.file]));
+      console.log('Room', room);
+      const targetFileData = room?.files.find(
+        (file) => file.id === data.data.id
+      );
+      console.log('File requested', targetFileData);
+      if (targetFileData) {
+        console.log('File found', targetFileData);
+        sendFileInChunks(new Blob([targetFileData.file]));
       }
     });
   }
@@ -172,24 +182,25 @@ const SharePage = () => {
     const reader = new FileReader();
     let offset = 0;
     reader.onload = () => {
-      const chunk = reader.result as ArrayBuffer;
-      const sendChunk = () => {
-        try {
-          dataChannel.send(chunk);
-          console.log('Chunk sent', offset, chunk);
-          offset += chunk.byteLength;
-          if (offset < file.size) {
-            readSlice(offset);
-          } else {
-            dataChannel.send('EOF');
-            console.log('File sent');
+      if (dataChannel.readyState === 'open') {
+        const chunk = reader.result as ArrayBuffer;
+        const sendChunk = () => {
+          try {
+            dataChannel.send(chunk);
+            console.log('Chunk sent', offset, chunk);
+            offset += chunk.byteLength;
+            if (offset < file.size) {
+              readSlice(offset);
+            } else {
+              console.log('File sent');
+            }
+          } catch (error) {
+            console.error('Error sending chunk', error);
+            setTimeout(sendChunk, 100);
           }
-        } catch (error) {
-          console.error('Error sending chunk', error);
-          setTimeout(sendChunk, 100);
-        }
-      };
-      sendChunk();
+        };
+        sendChunk();
+      }
     };
 
     const readSlice = (o: number) => {
