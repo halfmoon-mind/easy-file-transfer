@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-// const SOCKET_BASE_URL = "https://socket.easyfile.site";
-const SOCKET_BASE_URL = 'http://localhost:8080';
+const SOCKET_BASE_URL = 'https://socket.easyfile.site';
+// const SOCKET_BASE_URL = 'http://localhost:8080';
 
 const useSocket = (roomId: string) => {
   const [isConnected, setIsConnected] = useState(false);
